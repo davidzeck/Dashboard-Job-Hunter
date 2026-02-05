@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<
@@ -20,22 +20,28 @@ const Card = React.forwardRef<
 Card.displayName = "Card";
 
 // Motion-enabled card for hover effects
-const MotionCard = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> &
-    Omit<HTMLMotionProps<"div">, keyof React.HTMLAttributes<HTMLDivElement>>
->(({ className, ...props }, ref) => (
-  <motion.div
-    ref={ref}
-    className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
-      className
-    )}
-    whileHover={{ y: -2, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}
-    transition={{ duration: 0.2 }}
-    {...props}
-  />
-));
+interface MotionCardProps {
+  className?: string;
+  children?: React.ReactNode;
+  onClick?: () => void;
+}
+
+const MotionCard = React.forwardRef<HTMLDivElement, MotionCardProps>(
+  ({ className, children, onClick }, ref) => (
+    <motion.div
+      ref={ref}
+      className={cn(
+        "rounded-lg border bg-card text-card-foreground shadow-sm",
+        className
+      )}
+      onClick={onClick}
+      whileHover={{ y: -2, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}
+      transition={{ duration: 0.2 }}
+    >
+      {children}
+    </motion.div>
+  )
+);
 MotionCard.displayName = "MotionCard";
 
 const CardHeader = React.forwardRef<

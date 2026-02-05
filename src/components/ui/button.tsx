@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -87,10 +87,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 // Motion-enabled button for interactive animations
-const MotionButton = React.forwardRef<
-  HTMLButtonElement,
-  ButtonProps & Omit<HTMLMotionProps<"button">, keyof ButtonProps>
->(
+interface MotionButtonProps extends VariantProps<typeof buttonVariants> {
+  className?: string;
+  isLoading?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  children?: React.ReactNode;
+  disabled?: boolean;
+  onClick?: () => void;
+  type?: "button" | "submit" | "reset";
+}
+
+const MotionButton = React.forwardRef<HTMLButtonElement, MotionButtonProps>(
   (
     {
       className,
@@ -101,7 +109,8 @@ const MotionButton = React.forwardRef<
       rightIcon,
       children,
       disabled,
-      ...props
+      onClick,
+      type = "button",
     },
     ref
   ) => {
@@ -110,10 +119,11 @@ const MotionButton = React.forwardRef<
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || isLoading}
+        onClick={onClick}
+        type={type}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.1 }}
-        {...props}
       >
         {isLoading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
