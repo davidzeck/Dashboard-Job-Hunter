@@ -8,7 +8,7 @@
  * - Mutations invalidate queries (refetch from API)
  */
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useCompaniesStore,
@@ -20,7 +20,7 @@ import {
   type CompanyFilters,
 } from "@/stores";
 import { companiesService } from "@/services";
-import type { CreateCompanyInput, UpdateCompanyInput } from "@/types";
+import type { CreateCompanyInput, UpdateCompanyInput, Company, PaginatedResponse } from "@/types";
 
 // ============================================
 // Query Keys
@@ -42,17 +42,18 @@ export const companiesKeys = {
 
 export function useCompanies() {
   const queryClient = useQueryClient();
-  const toast = useToast();
 
   // Get current params from store using typed selectors
   const filters = useCompaniesStore(selectCompaniesFilters);
   const sort = useCompaniesStore(selectCompaniesSort);
   const pagination = useCompaniesStore(selectCompaniesPagination);
 
-  // Store actions (typed with CompaniesState)
-  const setCompanies = useCompaniesStore((s: CompaniesState) => s.setCompanies);
-  const setLoading = useCompaniesStore((s: CompaniesState) => s.setLoading);
-  const setError = useCompaniesStore((s: CompaniesState) => s.setError);
+  // Store actions - get once to avoid re-renders
+  const storeActions = useCompaniesStore((s: CompaniesState) => ({
+    setCompanies: s.setCompanies,
+    setLoading: s.setLoading,
+    setError: s.setError,
+  }));
 
   // Build API params from store state
   const apiParams = {
@@ -68,19 +69,29 @@ export function useCompanies() {
     queryFn: () => companiesService.getCompanies(apiParams),
   });
 
-  // Sync query state with store
+  // Track previous data to avoid unnecessary updates
+  const prevDataRef = useRef<PaginatedResponse<Company> | null>(null);
+
+  useEffect(() => {
+    if (query.data && query.data !== prevDataRef.current) {
+      prevDataRef.current = query.data;
+      storeActions.setCompanies(query.data);
+      storeActions.setLoading(false);
+    }
+  }, [query.data, storeActions]);
+
   useEffect(() => {
     if (query.isLoading) {
-      setLoading(true);
+      storeActions.setLoading(true);
     }
-    if (query.data) {
-      setCompanies(query.data);
-    }
+  }, [query.isLoading, storeActions]);
+
+  useEffect(() => {
     if (query.error) {
-      setError((query.error as Error).message);
-      toast.error("Failed to load companies", (query.error as Error).message);
+      storeActions.setError((query.error as Error).message);
+      storeActions.setLoading(false);
     }
-  }, [query.data, query.isLoading, query.error, setCompanies, setLoading, setError, toast]);
+  }, [query.error, storeActions]);
 
   const refetch = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: companiesKeys.lists() });
@@ -97,8 +108,8 @@ export function useCompanies() {
 // ============================================
 
 export function useCompany(id: string) {
-  const toast = useToast();
   const setSelectedCompany = useCompaniesStore((s: CompaniesState) => s.setSelectedCompany);
+  const prevDataRef = useRef<Company | null>(null);
 
   const query = useQuery({
     queryKey: companiesKeys.detail(id),
@@ -107,13 +118,11 @@ export function useCompany(id: string) {
   });
 
   useEffect(() => {
-    if (query.data) {
+    if (query.data && query.data !== prevDataRef.current) {
+      prevDataRef.current = query.data;
       setSelectedCompany(query.data);
     }
-    if (query.error) {
-      toast.error("Failed to load company", (query.error as Error).message);
-    }
-  }, [query.data, query.error, setSelectedCompany, toast]);
+  }, [query.data, setSelectedCompany]);
 
   return query;
 }

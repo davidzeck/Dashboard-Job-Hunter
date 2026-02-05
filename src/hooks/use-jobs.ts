@@ -4,11 +4,11 @@
  * ARCHITECTURE:
  * - Hooks read filter/sort/pagination params from store
  * - Hooks pass ALL params to API (backend does filtering)
- * - Hooks write API response back to store
- * - React Query handles caching and re-fetching
+ * - React Query handles caching and state
+ * - Store updates happen on successful queries only
  */
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useJobsStore,
@@ -19,7 +19,7 @@ import {
   type JobsState,
 } from "@/stores";
 import { jobsService } from "@/services";
-import type { Job } from "@/types";
+import type { Job, PaginatedResponse } from "@/types";
 
 // ============================================
 // Query Keys
@@ -40,17 +40,18 @@ export const jobsKeys = {
 
 export function useJobs() {
   const queryClient = useQueryClient();
-  const toast = useToast();
 
   // Get current params from store using typed selectors
   const filters = useJobsStore(selectJobsFilters);
   const sort = useJobsStore(selectJobsSort);
   const pagination = useJobsStore(selectJobsPagination);
 
-  // Store actions (typed with JobsState)
-  const setJobs = useJobsStore((s: JobsState) => s.setJobs);
-  const setLoading = useJobsStore((s: JobsState) => s.setLoading);
-  const setError = useJobsStore((s: JobsState) => s.setError);
+  // Store actions - get once to avoid re-renders
+  const storeActions = useJobsStore((s: JobsState) => ({
+    setJobs: s.setJobs,
+    setLoading: s.setLoading,
+    setError: s.setError,
+  }));
 
   // Build API params from store state
   const apiParams = {
@@ -66,19 +67,30 @@ export function useJobs() {
     queryFn: () => jobsService.getJobs(apiParams),
   });
 
-  // Sync query state with store
+  // Track previous data to avoid unnecessary updates
+  const prevDataRef = useRef<PaginatedResponse<Job> | null>(null);
+
+  // Sync query state with store - only when data actually changes
+  useEffect(() => {
+    if (query.data && query.data !== prevDataRef.current) {
+      prevDataRef.current = query.data;
+      storeActions.setJobs(query.data);
+      storeActions.setLoading(false);
+    }
+  }, [query.data, storeActions]);
+
   useEffect(() => {
     if (query.isLoading) {
-      setLoading(true);
+      storeActions.setLoading(true);
     }
-    if (query.data) {
-      setJobs(query.data);
-    }
+  }, [query.isLoading, storeActions]);
+
+  useEffect(() => {
     if (query.error) {
-      setError((query.error as Error).message);
-      toast.error("Failed to load jobs", (query.error as Error).message);
+      storeActions.setError((query.error as Error).message);
+      storeActions.setLoading(false);
     }
-  }, [query.data, query.isLoading, query.error, setJobs, setLoading, setError, toast]);
+  }, [query.error, storeActions]);
 
   const refetch = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: jobsKeys.lists() });
@@ -95,7 +107,6 @@ export function useJobs() {
 // ============================================
 
 export function useJob(id: string) {
-  const toast = useToast();
   const setSelectedJob = useJobsStore((s: JobsState) => s.setSelectedJob);
 
   const query = useQuery({
@@ -104,14 +115,15 @@ export function useJob(id: string) {
     enabled: !!id,
   });
 
+  // Track previous data
+  const prevDataRef = useRef<Job | null>(null);
+
   useEffect(() => {
-    if (query.data) {
+    if (query.data && query.data !== prevDataRef.current) {
+      prevDataRef.current = query.data;
       setSelectedJob(query.data);
     }
-    if (query.error) {
-      toast.error("Failed to load job", (query.error as Error).message);
-    }
-  }, [query.data, query.error, setSelectedJob, toast]);
+  }, [query.data, setSelectedJob]);
 
   return query;
 }

@@ -13,3 +13,4 @@ export {
   DialogDescription,
   ModalProvider,
 } from "./modal";
+export { CommandPalette } from "./command-palette";

@@ -8,7 +8,7 @@
  * - Mutations invalidate queries (refetch from API)
  */
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useSourcesStore,
@@ -19,7 +19,7 @@ import {
   type SourcesState,
 } from "@/stores";
 import { sourcesService } from "@/services";
-import type { SourceFilters, CreateJobSourceInput, UpdateJobSourceInput } from "@/types";
+import type { SourceFilters, CreateJobSourceInput, UpdateJobSourceInput, JobSource, PaginatedResponse } from "@/types";
 
 // Query keys
 export const sourcesKeys = {
@@ -40,17 +40,18 @@ export const sourcesKeys = {
  */
 export function useSources() {
   const queryClient = useQueryClient();
-  const toast = useToast();
 
   // Get current params from store using typed selectors
   const filters = useSourcesStore(selectSourcesFilters);
   const sort = useSourcesStore(selectSourcesSort);
   const pagination = useSourcesStore(selectSourcesPagination);
 
-  // Store actions (typed with SourcesState)
-  const setSources = useSourcesStore((s: SourcesState) => s.setSources);
-  const setLoading = useSourcesStore((s: SourcesState) => s.setLoading);
-  const setError = useSourcesStore((s: SourcesState) => s.setError);
+  // Store actions - get once to avoid re-renders
+  const storeActions = useSourcesStore((s: SourcesState) => ({
+    setSources: s.setSources,
+    setLoading: s.setLoading,
+    setError: s.setError,
+  }));
 
   // Build API params from store state
   const apiParams = {
@@ -66,16 +67,29 @@ export function useSources() {
     queryFn: () => sourcesService.getSources(apiParams),
   });
 
+  // Track previous data to avoid unnecessary updates
+  const prevDataRef = useRef<PaginatedResponse<JobSource> | null>(null);
+
   useEffect(() => {
-    setLoading(query.isLoading);
-    if (query.data) {
-      setSources(query.data);
+    if (query.data && query.data !== prevDataRef.current) {
+      prevDataRef.current = query.data;
+      storeActions.setSources(query.data);
+      storeActions.setLoading(false);
     }
+  }, [query.data, storeActions]);
+
+  useEffect(() => {
+    if (query.isLoading) {
+      storeActions.setLoading(true);
+    }
+  }, [query.isLoading, storeActions]);
+
+  useEffect(() => {
     if (query.error) {
-      setError((query.error as Error).message);
-      toast.error("Failed to load sources", (query.error as Error).message);
+      storeActions.setError((query.error as Error).message);
+      storeActions.setLoading(false);
     }
-  }, [query.data, query.isLoading, query.error, setSources, setLoading, setError, toast]);
+  }, [query.error, storeActions]);
 
   const refetch = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: sourcesKeys.lists() });
@@ -92,7 +106,7 @@ export function useSources() {
  */
 export function useSource(id: string) {
   const setSelectedSource = useSourcesStore((s: SourcesState) => s.setSelectedSource);
-  const toast = useToast();
+  const prevDataRef = useRef<JobSource | null>(null);
 
   const query = useQuery({
     queryKey: sourcesKeys.detail(id),
@@ -101,13 +115,11 @@ export function useSource(id: string) {
   });
 
   useEffect(() => {
-    if (query.data) {
+    if (query.data && query.data !== prevDataRef.current) {
+      prevDataRef.current = query.data;
       setSelectedSource(query.data);
     }
-    if (query.error) {
-      toast.error("Failed to load source", (query.error as Error).message);
-    }
-  }, [query.data, query.error, setSelectedSource, toast]);
+  }, [query.data, setSelectedSource]);
 
   return query;
 }
@@ -187,7 +199,7 @@ export function useTriggerScrape() {
   return useMutation({
     mutationFn: (id: string) => sourcesService.triggerScrape(id),
     onSuccess: (data) => {
-      toast.success("Scrape started", `Task ID: ${data.task_id}`);
+      toast.success("Scrape started", data.task_id ? `Task ID: ${data.task_id}` : "Processing...");
       // Invalidate logs after a delay to show new log
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: sourcesKeys.all });

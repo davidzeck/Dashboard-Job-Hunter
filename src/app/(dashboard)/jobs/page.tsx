@@ -112,7 +112,10 @@ export default function JobsPage() {
   };
 
   const handleBulkSave = () => {
-    setSavedJobs((prev) => [...new Set([...prev, ...selectedJobs])]);
+    setSavedJobs((prev) => {
+      const combined = prev.concat(selectedJobs);
+      return combined.filter((id, index) => combined.indexOf(id) === index);
+    });
     toast.success("Jobs saved", `${selectedJobs.length} jobs added to saved list`);
     clearSelection();
   };

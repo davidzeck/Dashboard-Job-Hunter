@@ -2,10 +2,9 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Bell, Search, Moon, Sun, LogOut } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Bell, Search, Moon, Sun, LogOut, Command } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
-import { Button, UserAvatar, SearchInput } from "@/components/ui";
+import { Button, UserAvatar } from "@/components/ui";
 
 interface HeaderProps {
   title?: string;
@@ -16,12 +15,17 @@ interface HeaderProps {
 export function Header({ title, description, actions }: HeaderProps) {
   const theme = useUIStore((state) => state.theme);
   const setTheme = useUIStore((state) => state.setTheme);
+  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const openCommandPalette = () => {
+    setCommandPaletteOpen(true);
   };
 
   return (
@@ -44,13 +48,17 @@ export function Header({ title, description, actions }: HeaderProps) {
 
         {/* Right side - Actions */}
         <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="hidden md:block w-64">
-            <SearchInput
-              placeholder="Search jobs, companies..."
-              className="h-9"
-            />
-          </div>
+          {/* Search - Opens Command Palette */}
+          <button
+            onClick={openCommandPalette}
+            className="hidden md:flex items-center gap-3 h-9 w-64 px-3 text-sm text-muted-foreground bg-muted/50 border rounded-lg hover:bg-muted transition-colors"
+          >
+            <Search className="h-4 w-4" />
+            <span className="flex-1 text-left">Search...</span>
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <Command className="h-3 w-3" />K
+            </kbd>
+          </button>
 
           {/* Custom actions */}
           {actions}
