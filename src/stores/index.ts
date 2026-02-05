@@ -67,3 +67,24 @@ export {
   selectCommandPaletteOpen,
   selectGlobalLoading,
 } from "./ui-store";
+
+// Settings store
+export {
+  useSettingsStore,
+  selectNotificationSettings,
+  selectJobAlertPreferences,
+  selectUserPreferences,
+  selectSessions,
+  selectCurrentSession,
+  selectOtherSessions,
+  selectIsLoadingNotifications,
+  selectIsLoadingSessions,
+  selectIsLoadingPreferences,
+  selectIsSaving,
+  selectSettingsError,
+  selectActiveTab,
+  selectHasPushEnabled,
+  selectHasEmailEnabled,
+  selectSessionCount,
+  type SettingsState,
+} from "./settings-store";

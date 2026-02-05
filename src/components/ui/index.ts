@@ -58,3 +58,4 @@ export {
   DropdownMenuRadioGroup,
 } from "./dropdown-menu";
 export { Pagination } from "./pagination";
+export { Switch } from "./switch";

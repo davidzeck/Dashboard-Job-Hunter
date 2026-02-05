@@ -1,8 +1,10 @@
 /**
  * Jobs Service - Job related API calls
+ * Supports demo mode with mock data
  */
 
 import { apiClient } from "./api-client";
+import { isDemoMode, mockJobsService } from "./mock-api-service";
 import type {
   Job,
   JobFilters,
@@ -23,6 +25,10 @@ export const jobsService = {
    * Get paginated list of jobs with filters
    */
   async getJobs(params: GetJobsParams = {}): Promise<PaginatedResponse<Job>> {
+    if (isDemoMode()) {
+      return mockJobsService.getJobs(params);
+    }
+
     return apiClient.get<PaginatedResponse<Job>>("/jobs", {
       page: params.page || 1,
       page_size: params.page_size || 20,
@@ -44,6 +50,9 @@ export const jobsService = {
    * Get a single job by ID
    */
   async getJob(id: string): Promise<Job> {
+    if (isDemoMode()) {
+      return mockJobsService.getJob(id);
+    }
     return apiClient.get<Job>(`/jobs/${id}`);
   },
 
@@ -54,6 +63,9 @@ export const jobsService = {
     companyId: string,
     params: { page?: number; page_size?: number } = {}
   ): Promise<PaginatedResponse<Job>> {
+    if (isDemoMode()) {
+      return mockJobsService.getJobs({ company_id: companyId, ...params });
+    }
     return apiClient.get<PaginatedResponse<Job>>(`/companies/${companyId}/jobs`, {
       page: params.page || 1,
       page_size: params.page_size || 20,
@@ -67,6 +79,9 @@ export const jobsService = {
     sourceId: string,
     params: { page?: number; page_size?: number } = {}
   ): Promise<PaginatedResponse<Job>> {
+    if (isDemoMode()) {
+      return mockJobsService.getJobs({ source_id: sourceId, ...params });
+    }
     return apiClient.get<PaginatedResponse<Job>>(`/sources/${sourceId}/jobs`, {
       page: params.page || 1,
       page_size: params.page_size || 20,
@@ -77,6 +92,9 @@ export const jobsService = {
    * Update job status
    */
   async updateJobStatus(id: string, status: Job["status"]): Promise<Job> {
+    if (isDemoMode()) {
+      return mockJobsService.updateJobStatus(id, status);
+    }
     return apiClient.patch<Job>(`/jobs/${id}`, { status });
   },
 
@@ -84,6 +102,10 @@ export const jobsService = {
    * Get new jobs (jobs seen in the last 24 hours)
    */
   async getNewJobs(limit: number = 10): Promise<Job[]> {
+    if (isDemoMode()) {
+      return mockJobsService.getNewJobs(limit);
+    }
+
     const response = await apiClient.get<PaginatedResponse<Job>>("/jobs", {
       page: 1,
       page_size: limit,
@@ -98,6 +120,9 @@ export const jobsService = {
    * Get dashboard statistics
    */
   async getDashboardStats(): Promise<DashboardStats> {
+    if (isDemoMode()) {
+      return mockJobsService.getDashboardStats();
+    }
     return apiClient.get<DashboardStats>("/dashboard/stats");
   },
 };

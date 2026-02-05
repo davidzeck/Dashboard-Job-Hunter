@@ -1,8 +1,10 @@
 /**
  * Sources Service - Job source related API calls
+ * Supports demo mode with mock data
  */
 
 import { apiClient } from "./api-client";
+import { isDemoMode, mockSourcesService } from "./mock-api-service";
 import type {
   JobSource,
   SourceFilters,
@@ -26,6 +28,10 @@ export const sourcesService = {
   async getSources(
     params: GetSourcesParams = {}
   ): Promise<PaginatedResponse<JobSource>> {
+    if (isDemoMode()) {
+      return mockSourcesService.getSources(params);
+    }
+
     return apiClient.get<PaginatedResponse<JobSource>>("/sources", {
       page: params.page || 1,
       page_size: params.page_size || 20,
@@ -43,6 +49,9 @@ export const sourcesService = {
    * Get a single source by ID
    */
   async getSource(id: string): Promise<JobSource> {
+    if (isDemoMode()) {
+      return mockSourcesService.getSource(id);
+    }
     return apiClient.get<JobSource>(`/sources/${id}`);
   },
 
@@ -50,6 +59,9 @@ export const sourcesService = {
    * Create a new job source
    */
   async createSource(data: CreateJobSourceInput): Promise<JobSource> {
+    if (isDemoMode()) {
+      return mockSourcesService.createSource(data);
+    }
     return apiClient.post<JobSource>("/sources", data);
   },
 
@@ -60,6 +72,9 @@ export const sourcesService = {
     id: string,
     data: UpdateJobSourceInput
   ): Promise<JobSource> {
+    if (isDemoMode()) {
+      return mockSourcesService.updateSource(id, data);
+    }
     return apiClient.patch<JobSource>(`/sources/${id}`, data);
   },
 
@@ -67,6 +82,9 @@ export const sourcesService = {
    * Delete a job source
    */
   async deleteSource(id: string): Promise<void> {
+    if (isDemoMode()) {
+      return mockSourcesService.deleteSource(id);
+    }
     return apiClient.delete(`/sources/${id}`);
   },
 
@@ -74,13 +92,19 @@ export const sourcesService = {
    * Toggle source active status
    */
   async toggleSourceActive(id: string, isActive: boolean): Promise<JobSource> {
+    if (isDemoMode()) {
+      return mockSourcesService.updateSource(id, { is_active: isActive });
+    }
     return apiClient.patch<JobSource>(`/sources/${id}`, { is_active: isActive });
   },
 
   /**
    * Trigger manual scrape for a source
    */
-  async triggerScrape(id: string): Promise<{ message: string; task_id: string }> {
+  async triggerScrape(id: string): Promise<{ message: string; task_id?: string }> {
+    if (isDemoMode()) {
+      return mockSourcesService.triggerScrape(id);
+    }
     return apiClient.post(`/sources/${id}/scrape`);
   },
 
@@ -91,6 +115,17 @@ export const sourcesService = {
     sourceId: string,
     params: { page?: number; page_size?: number } = {}
   ): Promise<PaginatedResponse<ScrapeLog>> {
+    if (isDemoMode()) {
+      const logs = await mockSourcesService.getScrapeLogs(sourceId);
+      return {
+        items: logs,
+        total: logs.length,
+        page: 1,
+        page_size: 20,
+        total_pages: 1,
+      };
+    }
+
     return apiClient.get<PaginatedResponse<ScrapeLog>>(
       `/sources/${sourceId}/logs`,
       {
@@ -104,6 +139,11 @@ export const sourcesService = {
    * Get sources by company
    */
   async getSourcesByCompany(companyId: string): Promise<JobSource[]> {
+    if (isDemoMode()) {
+      const response = await mockSourcesService.getSources({ company_id: companyId });
+      return response.items;
+    }
+
     const response = await apiClient.get<PaginatedResponse<JobSource>>(
       `/companies/${companyId}/sources`,
       { page_size: 100 }
@@ -115,6 +155,10 @@ export const sourcesService = {
    * Get sources with errors
    */
   async getErrorSources(): Promise<JobSource[]> {
+    if (isDemoMode()) {
+      return mockSourcesService.getErrorSources();
+    }
+
     const response = await apiClient.get<PaginatedResponse<JobSource>>(
       "/sources",
       {

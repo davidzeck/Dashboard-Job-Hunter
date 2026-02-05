@@ -6,10 +6,10 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
 import { useAuthStore, useToast } from "@/stores";
-import { authService } from "@/services";
+import { authService, isDemoMode } from "@/services";
 import { storeTokens } from "@/lib/auth";
 import {
   Button,
@@ -31,10 +31,12 @@ export function LoginForm() {
   const toast = useToast();
 
   const [showPassword, setShowPassword] = React.useState(false);
+  const isDemo = isDemoMode();
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -44,6 +46,11 @@ export function LoginForm() {
       rememberMe: false,
     },
   });
+
+  const fillDemoCredentials = () => {
+    setValue("email", "demo@jobscout.co.ke");
+    setValue("password", "demo123");
+  };
 
   const onSubmit = async (data: LoginFormData) => {
     try {
@@ -77,6 +84,37 @@ export function LoginForm() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      {/* Demo Mode Banner */}
+      {isDemo && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-4 rounded-lg bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-full bg-primary/10">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm text-primary">Demo Mode Active</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Explore Job Scout with sample data from Kenya&apos;s top tech companies.
+                No real backend required.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={fillDemoCredentials}
+              >
+                Use Demo Credentials
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       <Card className="border-0 shadow-none lg:shadow-lg lg:border">
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-2xl">Welcome back</CardTitle>

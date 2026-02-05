@@ -41,3 +41,22 @@ export {
   useToggleCompanyActive,
   companiesKeys,
 } from "./use-companies";
+
+// Settings hooks
+export {
+  useNotificationSettings,
+  useUpdateNotificationSettings,
+  useTestNotification,
+  useJobAlertPreferences,
+  useUpdateJobAlertPreferences,
+  useUserPreferences,
+  useUpdateUserPreferences,
+  useUpdateProfile,
+  useChangePassword,
+  useSessions,
+  useRevokeSession,
+  useRevokeAllSessions,
+  useExportData,
+  useDeleteAccount,
+  settingsKeys,
+} from "./use-settings";

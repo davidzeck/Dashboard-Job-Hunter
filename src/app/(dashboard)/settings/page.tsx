@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Moon, Sun, Monitor, Bell, Shield, User } from "lucide-react";
+import { User, Bell, Shield, Settings2, Moon, Sun, Monitor } from "lucide-react";
 import { PageHeader } from "@/components/layout";
 import {
   Card,
@@ -10,150 +10,207 @@ import {
   CardDescription,
   CardContent,
   Button,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
 } from "@/components/ui";
-import { useUIStore, useAuthStore } from "@/stores";
+import { useUIStore, useSettingsStore, selectActiveTab, type SettingsState } from "@/stores";
+import {
+  ProfileForm,
+  NotificationSettings,
+  SecuritySettings,
+} from "@/features/settings/components";
 
 export default function SettingsPage() {
-  const theme = useUIStore((state) => state.theme);
-  const setTheme = useUIStore((state) => state.setTheme);
-  const user = useAuthStore((state) => state.user);
+  const activeTab = useSettingsStore(selectActiveTab);
+  const setActiveTab = useSettingsStore((s: SettingsState) => s.setActiveTab);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Manage your dashboard preferences"
+        description="Manage your account and preferences"
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Appearance */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Appearance</CardTitle>
-            <CardDescription>
-              Customize how the dashboard looks
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) =>
+          setActiveTab(value as "profile" | "notifications" | "security" | "preferences")
+        }
+        className="space-y-6"
+      >
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="profile" className="gap-2">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-2">
+            <Bell className="h-4 w-4" />
+            <span className="hidden sm:inline">Notifications</span>
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-2">
+            <Shield className="h-4 w-4" />
+            <span className="hidden sm:inline">Security</span>
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="gap-2">
+            <Settings2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Preferences</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Profile Tab */}
+        <TabsContent value="profile" className="space-y-6">
+          <ProfileForm />
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="space-y-6">
+          <NotificationSettings />
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security" className="space-y-6">
+          <SecuritySettings />
+        </TabsContent>
+
+        {/* Preferences Tab */}
+        <TabsContent value="preferences" className="space-y-6">
+          <PreferencesSection />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function PreferencesSection() {
+  const theme = useUIStore((state) => state.theme);
+  const setTheme = useUIStore((state) => state.setTheme);
+
+  return (
+    <div className="space-y-6">
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Appearance</CardTitle>
+          <CardDescription>
+            Customize how the dashboard looks
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-3 block">Theme</label>
+            <div className="flex gap-2">
+              <Button
+                variant={theme === "light" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTheme("light")}
+                className="gap-2"
+              >
+                <Sun className="h-4 w-4" />
+                Light
+              </Button>
+              <Button
+                variant={theme === "dark" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTheme("dark")}
+                className="gap-2"
+              >
+                <Moon className="h-4 w-4" />
+                Dark
+              </Button>
+              <Button
+                variant={theme === "system" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTheme("system")}
+                className="gap-2"
+              >
+                <Monitor className="h-4 w-4" />
+                System
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Display Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Display</CardTitle>
+          <CardDescription>
+            Configure default display options
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm font-medium mb-2 block">Theme</label>
-              <div className="flex gap-2">
-                <Button
-                  variant={theme === "light" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTheme("light")}
-                  leftIcon={<Sun className="h-4 w-4" />}
-                >
-                  Light
-                </Button>
-                <Button
-                  variant={theme === "dark" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTheme("dark")}
-                  leftIcon={<Moon className="h-4 w-4" />}
-                >
-                  Dark
-                </Button>
-                <Button
-                  variant={theme === "system" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTheme("system")}
-                  leftIcon={<Monitor className="h-4 w-4" />}
-                >
-                  System
-                </Button>
-              </div>
+              <p className="font-medium text-sm">Default View</p>
+              <p className="text-xs text-muted-foreground">
+                Choose between card and table views
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                Cards
+              </Button>
+              <Button variant="ghost" size="sm">
+                Table
+              </Button>
+            </div>
+          </div>
 
-        {/* Account */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Account</CardTitle>
-            <CardDescription>Your account information</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">{user?.full_name || "User"}</p>
-                <p className="text-sm text-muted-foreground">
-                  {user?.email || "email@example.com"}
-                </p>
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Items Per Page</p>
+              <p className="text-xs text-muted-foreground">
+                Number of items to show in lists
+              </p>
             </div>
-            <Button variant="outline" className="w-full">
-              Edit Profile
-            </Button>
-          </CardContent>
-        </Card>
+            <select className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
 
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Notifications</CardTitle>
-            <CardDescription>
-              Configure how you receive alerts
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-sm">Push Notifications</p>
-                  <p className="text-xs text-muted-foreground">
-                    Receive alerts on your device
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-input"
-                defaultChecked
-              />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Show Expired Jobs</p>
+              <p className="text-xs text-muted-foreground">
+                Include expired job listings in search results
+              </p>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-sm">Email Notifications</p>
-                  <p className="text-xs text-muted-foreground">
-                    Receive alerts via email
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-input"
-                defaultChecked
-              />
-            </div>
-          </CardContent>
-        </Card>
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-input"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Security */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Security</CardTitle>
-            <CardDescription>
-              Manage your security settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full">
-              <Shield className="h-4 w-4 mr-2" />
-              Change Password
+      {/* Data & Privacy */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Data & Privacy</CardTitle>
+          <CardDescription>
+            Manage your data and privacy settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Export Your Data</p>
+              <p className="text-xs text-muted-foreground">
+                Download all your data in JSON format
+              </p>
+            </div>
+            <Button variant="outline" size="sm">
+              Export Data
             </Button>
-            <Button variant="outline" className="w-full text-destructive">
-              Sign Out of All Devices
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
