@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui";
 import { AreaChart } from "@/components/ui/charts";
 
 interface JobsTimelineData {
+  [key: string]: string | number;
   date: string;
   jobs: number;
   newJobs: number;
@@ -34,9 +35,10 @@ export function JobsTimelineChart({
     if (previous === 0) return { value: 0, direction: "neutral" as const };
 
     const percentChange = ((recent - previous) / previous) * 100;
+    const direction = percentChange > 0 ? "up" : percentChange < 0 ? "down" : "neutral";
     return {
       value: Math.abs(Math.round(percentChange)),
-      direction: percentChange > 0 ? "up" : percentChange < 0 ? "down" : "neutral",
+      direction: direction as "up" | "down" | "neutral",
     };
   }, [data]);
 

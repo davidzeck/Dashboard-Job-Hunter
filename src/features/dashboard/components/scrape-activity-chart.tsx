@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui";
 import { BarChart } from "@/components/ui/charts";
 
 interface ScrapeActivityData {
+  [key: string]: string | number;
   hour: string;
   scrapes: number;
   success: number;

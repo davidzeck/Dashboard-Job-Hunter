@@ -112,6 +112,7 @@ export const mockJobsService = {
     page_size?: number;
     search?: string;
     company_id?: string;
+    source_id?: string;
     status?: string;
     experience_level?: string;
     job_type?: string;
@@ -135,6 +136,10 @@ export const mockJobsService = {
 
     if (params.company_id) {
       filteredJobs = filteredJobs.filter((j) => j.company_id === params.company_id);
+    }
+
+    if (params.source_id) {
+      filteredJobs = filteredJobs.filter((j) => j.source_id === params.source_id);
     }
 
     if (params.status) {

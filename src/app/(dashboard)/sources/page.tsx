@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, RefreshCw, LayoutGrid, Table2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -22,6 +23,28 @@ import { useSourcesStore, useUIStore, useToast } from "@/stores";
 import type { JobSource, SourceFilters, SortConfig } from "@/types";
 
 export default function SourcesPage() {
+  return (
+    <Suspense fallback={<SourcesPageSkeleton />}>
+      <SourcesPageContent />
+    </Suspense>
+  );
+}
+
+function SourcesPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="h-20 bg-muted/50 rounded-lg animate-pulse" />
+      <div className="h-12 bg-muted/50 rounded-lg animate-pulse" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="h-48 bg-muted/50 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SourcesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
