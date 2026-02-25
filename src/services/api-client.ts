@@ -49,6 +49,20 @@ class ApiClient {
     return url.toString();
   }
 
+  // Backend uses { limit, pages }, dashboard expects { page_size, total_pages }
+  private normalizePaginated<T>(data: unknown): T {
+    if (
+      data !== null &&
+      typeof data === "object" &&
+      "items" in data &&
+      "limit" in data
+    ) {
+      const d = data as Record<string, unknown>;
+      return { ...d, page_size: d.limit, total_pages: d.pages } as T;
+    }
+    return data as T;
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       // Handle 401 - unauthorized
@@ -74,7 +88,8 @@ class ApiClient {
       return {} as T;
     }
 
-    return response.json();
+    const json = await response.json();
+    return this.normalizePaginated<T>(json);
   }
 
   async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {

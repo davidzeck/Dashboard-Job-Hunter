@@ -23,12 +23,13 @@ export interface AuthTokens {
 export interface Company {
   id: string;
   name: string;
+  slug: string;
   logo_url?: string;
   careers_url: string;
+  description?: string;
   is_active: boolean;
-  scraper_type: "static" | "dynamic" | "api";
-  scrape_frequency_hours: number;
-  last_scraped_at?: string;
+  jobs_count: number;
+  sources_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -83,7 +84,7 @@ export interface Job {
 }
 
 // Scrape Log Types
-export type ScrapeStatus = "started" | "completed" | "failed";
+export type ScrapeStatus = "success" | "partial" | "failed";
 
 export interface ScrapeLog {
   id: string;
@@ -168,10 +169,10 @@ export interface SortConfig {
 // Form Types
 export interface CreateCompanyInput {
   name: string;
+  slug: string;
   logo_url?: string;
   careers_url: string;
-  scraper_type: "static" | "dynamic" | "api";
-  scrape_frequency_hours: number;
+  description?: string;
 }
 
 export interface UpdateCompanyInput extends Partial<CreateCompanyInput> {

@@ -20,6 +20,26 @@ interface GetJobsParams extends JobFilters {
   sort_direction?: "asc" | "desc";
 }
 
+// Backend returns different field names — normalize to dashboard Job type
+function transformJob(raw: Record<string, unknown>): Job {
+  const company = raw.company as Record<string, unknown> | undefined;
+  return {
+    ...(raw as unknown as Job),
+    // apply_url → application_url
+    application_url: (raw.apply_url ?? raw.application_url) as string,
+    // embedded company object → company_id string
+    company_id: company?.id as string ?? (raw.company_id as string) ?? "",
+    company: company as unknown as Job["company"],
+    // discovered_at / posted_at → first_seen_at / last_seen_at
+    first_seen_at: (raw.posted_at ?? raw.discovered_at ?? raw.first_seen_at) as string,
+    last_seen_at: (raw.discovered_at ?? raw.last_seen_at) as string,
+    // is_active boolean → status enum
+    status: (raw.status as Job["status"]) ?? (raw.is_active ? "active" : "expired"),
+    // source_id not present in list response — default to empty
+    source_id: (raw.source_id as string) ?? "",
+  };
+}
+
 export const jobsService = {
   /**
    * Get paginated list of jobs with filters
@@ -29,21 +49,18 @@ export const jobsService = {
       return mockJobsService.getJobs(params);
     }
 
-    return apiClient.get<PaginatedResponse<Job>>("/jobs", {
+    // Backend params: page, limit, role (keyword), location, location_type, days_ago
+    const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>("/jobs", {
       page: params.page || 1,
-      page_size: params.page_size || 20,
-      search: params.search,
-      company_id: params.company_id,
-      source_id: params.source_id,
-      status: params.status,
-      experience_level: params.experience_level,
-      job_type: params.job_type,
+      limit: params.page_size || 20,
+      role: params.search,
       location: params.location,
-      date_from: params.date_from,
-      date_to: params.date_to,
-      sort_by: params.sort_by || "first_seen_at",
-      sort_direction: params.sort_direction || "desc",
     });
+
+    return {
+      ...response,
+      items: response.items.map(transformJob),
+    };
   },
 
   /**
@@ -53,7 +70,8 @@ export const jobsService = {
     if (isDemoMode()) {
       return mockJobsService.getJob(id);
     }
-    return apiClient.get<Job>(`/jobs/${id}`);
+    const raw = await apiClient.get<Record<string, unknown>>(`/jobs/${id}`);
+    return transformJob(raw);
   },
 
   /**
@@ -106,14 +124,12 @@ export const jobsService = {
       return mockJobsService.getNewJobs(limit);
     }
 
-    const response = await apiClient.get<PaginatedResponse<Job>>("/jobs", {
+    const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>("/jobs", {
       page: 1,
-      page_size: limit,
-      status: "new",
-      sort_by: "first_seen_at",
-      sort_direction: "desc",
+      limit,
+      days_ago: 1,
     });
-    return response.items;
+    return response.items.map(transformJob);
   },
 
   /**

@@ -85,7 +85,7 @@ export const useAuthStore = create<AuthState>()(
           state.error = error;
         }),
 
-      login: (user, tokens) =>
+      login: (user, tokens) => {
         set((state) => {
           state.user = user;
           state.tokens = tokens;
@@ -93,7 +93,12 @@ export const useAuthStore = create<AuthState>()(
           state.error = null;
           state.lastActivity = Date.now();
           state.sessionExpiry = Date.now() + 30 * 60 * 1000;
-        }),
+        });
+        // Set cookie so SSR middleware can read it for redirects
+        if (typeof window !== "undefined") {
+          document.cookie = `jobscout_access_token=${tokens.access_token}; path=/; max-age=86400`;
+        }
+      },
 
       logout: () => {
         // Clear tokens from storage

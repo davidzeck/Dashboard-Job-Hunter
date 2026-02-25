@@ -85,7 +85,15 @@ export const authService = {
       throw new Error(error.detail || "Invalid email or password");
     }
 
-    return response.json();
+    const tokens = await response.json();
+    const userRes = await fetch(`${API_BASE_URL}/users/me`, {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (!userRes.ok) {
+      throw new Error("Failed to fetch user profile after login");
+    }
+    const user = await userRes.json();
+    return { user, tokens };
   },
 
   /**
@@ -112,7 +120,15 @@ export const authService = {
       throw new Error(error.detail || "Registration failed");
     }
 
-    return response.json();
+    const tokens = await response.json();
+    const userRes = await fetch(`${API_BASE_URL}/users/me`, {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (!userRes.ok) {
+      throw new Error("Failed to fetch user profile after registration");
+    }
+    const user = await userRes.json();
+    return { user, tokens };
   },
 
   /**
@@ -245,7 +261,7 @@ export const authService = {
     if (isDemoMode()) {
       return mockAuthService.changePassword();
     }
-    return apiClient.post("/auth/change-password", {
+    return apiClient.post("/users/me/change-password", {
       current_password: currentPassword,
       new_password: newPassword,
     });
