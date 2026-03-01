@@ -9,6 +9,8 @@ export interface User {
   full_name: string;
   is_active: boolean;
   is_admin: boolean;
+  has_cv: boolean;
+  skills_count: number;
   created_at: string;
   updated_at: string;
 }

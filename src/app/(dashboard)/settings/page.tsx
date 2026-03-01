@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { User, Bell, Shield, Settings2, Moon, Sun, Monitor } from "lucide-react";
+import { User, Bell, Shield, Settings2, FileText, Moon, Sun, Monitor } from "lucide-react";
 import { PageHeader } from "@/components/layout";
 import {
   Card,
@@ -20,6 +20,7 @@ import {
   ProfileForm,
   NotificationSettings,
   SecuritySettings,
+  CVManagement,
 } from "@/features/settings/components";
 
 export default function SettingsPage() {
@@ -36,11 +37,11 @@ export default function SettingsPage() {
       <Tabs
         value={activeTab}
         onValueChange={(value) =>
-          setActiveTab(value as "profile" | "notifications" | "security" | "preferences")
+          setActiveTab(value as "profile" | "notifications" | "security" | "preferences" | "documents")
         }
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
@@ -56,6 +57,10 @@ export default function SettingsPage() {
           <TabsTrigger value="preferences" className="gap-2">
             <Settings2 className="h-4 w-4" />
             <span className="hidden sm:inline">Preferences</span>
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Documents</span>
           </TabsTrigger>
         </TabsList>
 
@@ -77,6 +82,11 @@ export default function SettingsPage() {
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-6">
           <PreferencesSection />
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
+          <CVManagement />
         </TabsContent>
       </Tabs>
     </div>

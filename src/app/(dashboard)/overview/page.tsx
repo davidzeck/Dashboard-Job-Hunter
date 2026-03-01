@@ -8,6 +8,8 @@ import {
   TrendingUp,
   Database,
   Bell,
+  FileText,
+  ArrowRight,
 } from "lucide-react";
 import { PageHeader, DashboardGrid } from "@/components/layout";
 import {
@@ -33,13 +35,16 @@ import {
   useErrorSources,
   useTriggerScrape,
 } from "@/hooks";
-import { useUIStore, useToast } from "@/stores";
+import { useUIStore, useToast, useAuthStore, selectUser } from "@/stores";
+import { useSettingsStore, type SettingsState } from "@/stores";
 import type { Job } from "@/types";
 
 export default function OverviewPage() {
   const router = useRouter();
   const toast = useToast();
   const openModal = useUIStore((state) => state.openModal);
+  const user = useAuthStore(selectUser);
+  const setActiveTab = useSettingsStore((s: SettingsState) => s.setActiveTab);
 
   // Data fetching hooks
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
@@ -102,8 +107,37 @@ export default function OverviewPage() {
     router.push("/settings");
   };
 
+  const handleGoToDocuments = () => {
+    setActiveTab("documents");
+    router.push("/settings");
+  };
+
   return (
     <div className="space-y-6">
+      {/* CV onboarding banner — shown when user has no CV */}
+      {user && !user.has_cv && (
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Upload your CV to unlock skill matching</p>
+              <p className="text-xs text-muted-foreground">
+                Your skills will be extracted automatically and matched against job requirements.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleGoToDocuments}
+            className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Upload CV
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header with quick actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <PageHeader

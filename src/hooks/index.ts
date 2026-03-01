@@ -42,6 +42,18 @@ export {
   companiesKeys,
 } from "./use-companies";
 
+// CV hooks
+export {
+  useCVs,
+  useUploadCV,
+  useDeleteCV,
+  useGetCVDownloadUrl,
+  useSkills,
+  useAddSkill,
+  useRemoveSkill,
+  cvKeys,
+} from "./use-cv";
+
 // Settings hooks
 export {
   useNotificationSettings,

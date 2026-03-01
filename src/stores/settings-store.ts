@@ -32,7 +32,7 @@ export interface SettingsState {
   error: string | null;
 
   // UI State
-  activeTab: "profile" | "notifications" | "security" | "preferences";
+  activeTab: "profile" | "notifications" | "security" | "preferences" | "documents";
 
   // Actions (for hooks to write API responses)
   setNotificationSettings: (settings: NotificationSettings | null) => void;
@@ -50,7 +50,7 @@ export interface SettingsState {
   setError: (error: string | null) => void;
 
   // UI Actions
-  setActiveTab: (tab: "profile" | "notifications" | "security" | "preferences") => void;
+  setActiveTab: (tab: "profile" | "notifications" | "security" | "preferences" | "documents") => void;
 
   // Reset
   resetStore: () => void;
