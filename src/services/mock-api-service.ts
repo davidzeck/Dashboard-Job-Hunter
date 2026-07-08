@@ -392,6 +392,9 @@ export const mockCompaniesService = {
     return {
       id: "comp-new-" + Date.now(),
       name: data.name || "",
+      slug: data.slug || (data.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      jobs_count: 0,
+      sources_count: 0,
       logo_url: data.logo_url,
       careers_url: data.careers_url || "",
       is_active: true,

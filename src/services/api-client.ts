@@ -1,12 +1,18 @@
 /**
  * API Client - Centralized HTTP client for all API calls
  * Handles authentication, error handling, and request/response transformation
+ *
+ * Auth model: short-lived access token in memory (auth store, never persisted);
+ * refresh token in an httpOnly cookie. All requests go through the same-origin
+ * Next.js rewrite (/api/v1/* → backend), so the cookie is first-party.
+ * On a 401 the client silently refreshes once and retries the request.
  */
 
 import { useAuthStore } from "@/stores";
+import { refreshTokenWithDedup } from "./token-refresh";
 import type { ApiError } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -36,7 +42,12 @@ class ApiClient {
     endpoint: string,
     params?: Record<string, string | number | boolean | undefined>
   ): string {
-    const url = new URL(`${this.baseUrl}${endpoint}`);
+    // Base may be relative (/api/v1 via the Next rewrite) or absolute
+    const base =
+      typeof window !== "undefined"
+        ? new URL(this.baseUrl, window.location.origin)
+        : new URL(this.baseUrl, "http://localhost:3000");
+    const url = new URL(`${base.pathname}${endpoint}`, base.origin);
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -63,24 +74,20 @@ class ApiClient {
     return data as T;
   }
 
+  private async parseError(response: Response): Promise<string> {
+    let errorMessage = "An error occurred";
+    try {
+      const errorData: ApiError = await response.json();
+      errorMessage = errorData.detail || errorMessage;
+    } catch {
+      errorMessage = response.statusText || errorMessage;
+    }
+    return errorMessage;
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      // Handle 401 - unauthorized
-      if (response.status === 401) {
-        useAuthStore.getState().logout();
-        throw new Error("Session expired. Please log in again.");
-      }
-
-      // Parse error response
-      let errorMessage = "An error occurred";
-      try {
-        const errorData: ApiError = await response.json();
-        errorMessage = errorData.detail || errorMessage;
-      } catch {
-        errorMessage = response.statusText || errorMessage;
-      }
-
-      throw new Error(errorMessage);
+      throw new Error(await this.parseError(response));
     }
 
     // Handle empty responses
@@ -97,17 +104,34 @@ class ApiClient {
 
     const url = this.buildUrl(endpoint, params);
 
-    const requestHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...this.getAuthHeaders(),
-      ...headers,
-    };
+    const doFetch = () =>
+      fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...this.getAuthHeaders(),
+          ...headers,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
 
-    const response = await fetch(url, {
-      method,
-      headers: requestHeaders,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    let response = await doFetch();
+
+    // 401 on a non-auth endpoint: silently refresh via the httpOnly cookie
+    // and retry ONCE with the new access token.
+    if (response.status === 401 && !endpoint.startsWith("/auth/")) {
+      try {
+        await refreshTokenWithDedup();
+      } catch {
+        useAuthStore.getState().logout();
+        throw new Error("Session expired. Please log in again.");
+      }
+      response = await doFetch();
+      if (response.status === 401) {
+        useAuthStore.getState().logout();
+        throw new Error("Session expired. Please log in again.");
+      }
+    }
 
     return this.handleResponse<T>(response);
   }

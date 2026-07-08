@@ -214,7 +214,7 @@ export function CompanyTable({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {scraperTypeLabels[company.scraper_type] || company.scraper_type}
+                  {scraperTypeLabels[company.scraper_type ?? ""] || company.scraper_type || "Unknown"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   Every {company.scrape_frequency_hours}h

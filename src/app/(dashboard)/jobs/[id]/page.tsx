@@ -34,6 +34,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { PageHeader } from "@/components/layout";
+import { CVMatchCard } from "@/features/jobs/components";
 import { useJobsStore, useToast } from "@/stores";
 import type { Job } from "@/types";
 
@@ -73,6 +74,9 @@ export default function JobDetailPage() {
           company: {
             id: "company-1",
             name: "Safaricom",
+            slug: "safaricom",
+            jobs_count: 8,
+            sources_count: 1,
             logo_url: undefined,
             careers_url: "https://safaricom.co.ke/careers",
             is_active: true,
@@ -396,6 +400,9 @@ export default function JobDetailPage() {
               </dl>
             </CardContent>
           </Card>
+
+          {/* CV Match — AI Analysis */}
+          <CVMatchCard jobId={jobId} />
 
           {/* Actions */}
           <Card>

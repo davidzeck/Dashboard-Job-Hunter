@@ -15,20 +15,21 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useUIStore } from "@/stores";
+import { useAuthStore, selectIsAdmin, useUIStore } from "@/stores";
 import { Button } from "@/components/ui";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
-  { label: "Sources", href: "/sources", icon: Database },
-  { label: "Companies", href: "/companies", icon: Building2 },
+  { label: "Sources", href: "/sources", icon: Database, adminOnly: true },
+  { label: "Companies", href: "/companies", icon: Building2, adminOnly: true },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -36,6 +37,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebarCollapse = useUIStore((state) => state.toggleSidebarCollapse);
+  const isAdmin = useAuthStore(selectIsAdmin);
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <motion.aside
@@ -68,7 +71,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
             const Icon = item.icon;
 

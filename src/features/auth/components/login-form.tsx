@@ -10,7 +10,6 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
 import { useAuthStore, useToast } from "@/stores";
 import { authService, isDemoMode } from "@/services";
-import { storeTokens } from "@/lib/auth";
 import {
   Button,
   Input,
@@ -57,16 +56,12 @@ export function LoginForm() {
       const response = await authService.login({
         email: data.email,
         password: data.password,
+        rememberMe: data.rememberMe,
       });
 
-      // Store tokens
-      storeTokens(response.tokens, data.rememberMe);
-
-      // Update auth store
+      // Access token → memory (store); refresh token → httpOnly cookie set
+      // by the backend. Nothing auth-related touches web storage anymore.
       login(response.user, response.tokens);
-
-      // Set cookie for middleware
-      document.cookie = `jobscout_access_token=${response.tokens.access_token}; path=/; max-age=${data.rememberMe ? 86400 * 30 : 86400}`;
 
       toast.success("Welcome back!", `Logged in as ${response.user.full_name}`);
 

@@ -41,6 +41,35 @@ export interface CVDownloadUrlResponse {
   expires_in_seconds: number;
 }
 
+// ── AI/ATS Types ──────────────────────────────────────────────
+
+export interface CVAnalysisResult {
+  cv_id: string;
+  job_id: string;
+  match_score: number; // 0.0–1.0
+  present_keywords: string[];
+  missing_keywords: string[];
+  suggested_additions: string[];
+  cached: boolean;
+  analyzed_at: string;
+}
+
+export interface CVTailorResult {
+  cv_id: string;
+  job_id: string;
+  tailored_summary: string;
+  tailored_skills: string[];
+  keywords_added: string[];
+  original_summary: string;
+}
+
+export interface CVTaskStatusResponse<T = CVAnalysisResult | CVTailorResult> {
+  task_id: string;
+  status: "pending" | "started" | "success" | "failure";
+  result?: T | null;
+  error?: string | null;
+}
+
 // ============================================
 // Helpers
 // ============================================
@@ -167,5 +196,32 @@ export const cvService = {
   /** Remove a skill by name. */
   async removeSkill(skill: string): Promise<{ message: string }> {
     return apiClient.delete<{ message: string }>(`/users/me/skills/${encodeURIComponent(skill)}`);
+  },
+
+  // ──────────────────────────────────────────
+  // AI / ATS
+  // ──────────────────────────────────────────
+
+  /** Analyze a CV against a job description. Returns cached result or task_id for polling. */
+  async analyzeCv(cvId: string, jobId: string): Promise<CVTaskStatusResponse<CVAnalysisResult>> {
+    return apiClient.post<CVTaskStatusResponse<CVAnalysisResult>>(
+      `/users/me/cv/${cvId}/analyze`,
+      { job_id: jobId }
+    );
+  },
+
+  /** Tailor a CV for a specific job. Always async — returns task_id for polling. */
+  async tailorCv(cvId: string, jobId: string): Promise<CVTaskStatusResponse<CVTailorResult>> {
+    return apiClient.post<CVTaskStatusResponse<CVTailorResult>>(
+      `/users/me/cv/${cvId}/tailor`,
+      { job_id: jobId }
+    );
+  },
+
+  /** Poll a Celery task by ID. */
+  async getTaskStatus<T = CVAnalysisResult | CVTailorResult>(
+    taskId: string
+  ): Promise<CVTaskStatusResponse<T>> {
+    return apiClient.get<CVTaskStatusResponse<T>>(`/users/me/cv/tasks/${taskId}`);
   },
 };

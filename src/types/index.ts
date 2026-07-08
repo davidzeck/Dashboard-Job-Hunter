@@ -17,8 +17,10 @@ export interface User {
 
 export interface AuthTokens {
   access_token: string;
-  refresh_token: string;
+  // null for web clients — the refresh token lives in an httpOnly cookie
+  refresh_token?: string | null;
   token_type: string;
+  expires_in?: number; // access-token lifetime in seconds
 }
 
 // Company Types
@@ -32,6 +34,11 @@ export interface Company {
   is_active: boolean;
   jobs_count: number;
   sources_count: number;
+  // Scraper metadata shown on company cards/detail (mock-era fields; the
+  // backend keeps these on job_sources, so they are optional here)
+  scraper_type?: string;
+  scrape_frequency_hours?: number;
+  last_scraped_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -86,7 +93,12 @@ export interface Job {
 }
 
 // Scrape Log Types
-export type ScrapeStatus = "success" | "partial" | "failed";
+export type ScrapeStatus =
+  | "success"
+  | "partial"
+  | "failed"
+  | "completed"
+  | "started";
 
 export interface ScrapeLog {
   id: string;
@@ -175,6 +187,8 @@ export interface CreateCompanyInput {
   logo_url?: string;
   careers_url: string;
   description?: string;
+  scraper_type?: string;
+  scrape_frequency_hours?: number;
 }
 
 export interface UpdateCompanyInput extends Partial<CreateCompanyInput> {

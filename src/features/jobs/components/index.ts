@@ -11,3 +11,6 @@ export { JobFiltersBar } from "./job-filters";
 
 // View controls
 export { ViewToggle, ViewToggleCompact, type ViewMode } from "./view-toggle";
+
+// AI / ATS
+export { CVMatchCard } from "./cv-match-card";

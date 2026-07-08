@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = [
   "/register",
   "/forgot-password",
   "/reset-password",
+  "/verify-email",
 ];
 
 // Auth routes - redirect to dashboard if already logged in
@@ -14,6 +15,11 @@ const AUTH_ROUTES = ["/login", "/register"];
 
 // Static files and API routes to skip
 const SKIP_ROUTES = ["/_next", "/api", "/favicon.ico", "/images", "/fonts"];
+
+// The backend-set httpOnly refresh cookie. Middleware runs server-side, so it
+// CAN read httpOnly cookies — this is a UX guard only; the API (which
+// validates JWTs + session state) is the actual security boundary.
+const REFRESH_COOKIE = "jobscout_refresh";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -23,12 +29,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for access token in cookies
-  const accessToken = request.cookies.get("jobscout_access_token")?.value;
+  // Demo mode has no backend and therefore no cookie — let everything through
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+    return NextResponse.next();
+  }
 
-  // Also check Authorization header for API calls
-  const authHeader = request.headers.get("Authorization");
-  const hasToken = !!accessToken || !!authHeader;
+  const hasSession = !!request.cookies.get(REFRESH_COOKIE)?.value;
 
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -38,14 +44,13 @@ export function middleware(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  // If user is authenticated and trying to access auth routes, redirect to dashboard
-  if (hasToken && isAuthRoute) {
+  // If user has a session and hits login/register, send them to the app
+  if (hasSession && isAuthRoute) {
     return NextResponse.redirect(new URL("/overview", request.url));
   }
 
-  // If user is not authenticated and trying to access protected routes
-  if (!hasToken && !isPublicRoute) {
-    // Store the intended destination for redirect after login
+  // No session on a protected route → login (with return destination)
+  if (!hasSession && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);

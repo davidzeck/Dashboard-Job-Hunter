@@ -3,9 +3,15 @@
  * Handles all authentication operations including login, registration,
  * password reset, and session management
  * Supports demo mode with mock data
+ *
+ * Web auth contract (X-Client: web):
+ * - login/register/refresh set the refresh token as an httpOnly cookie and
+ *   return refresh_token: null in the body — JS never holds a long-lived
+ *   credential. The access token lives in the auth store (memory only).
  */
 
 import { apiClient } from "./api-client";
+import { refreshTokenWithDedup } from "./token-refresh";
 import { isDemoMode, mockAuthService, mockSettingsService } from "./mock-api-service";
 import type { User, AuthTokens } from "@/types";
 
@@ -16,6 +22,7 @@ import type { User, AuthTokens } from "@/types";
 interface LoginCredentials {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 interface RegisterData {
@@ -27,15 +34,6 @@ interface RegisterData {
 interface AuthResponse {
   user: User;
   tokens: AuthTokens;
-}
-
-interface PasswordResetRequest {
-  email: string;
-}
-
-interface PasswordResetConfirm {
-  token: string;
-  password: string;
 }
 
 interface ChangePasswordData {
@@ -52,7 +50,9 @@ interface UpdateProfileData {
 // API Configuration
 // ============================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+const WEB_HEADERS = { "X-Client": "web" };
 
 // ============================================
 // Auth Service
@@ -61,7 +61,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/a
 export const authService = {
   /**
    * Login with email and password
-   * Uses OAuth2 password flow with form data
+   * OAuth2 password form (username = email) + remember_me; the refresh token
+   * arrives as an httpOnly cookie, not in the body.
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     if (isDemoMode()) {
@@ -71,11 +72,13 @@ export const authService = {
     const formData = new URLSearchParams();
     formData.append("username", credentials.email);
     formData.append("password", credentials.password);
+    formData.append("remember_me", credentials.rememberMe ? "true" : "false");
 
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        ...WEB_HEADERS,
       },
       body: formData.toString(),
     });
@@ -85,7 +88,7 @@ export const authService = {
       throw new Error(error.detail || "Invalid email or password");
     }
 
-    const tokens = await response.json();
+    const tokens: AuthTokens = await response.json();
     const userRes = await fetch(`${API_BASE_URL}/users/me`, {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
@@ -108,19 +111,20 @@ export const authService = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...WEB_HEADERS,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: "Registration failed" }));
-      if (error.detail?.includes("already exists")) {
+      if (error.detail?.includes("already")) {
         throw new Error("An account with this email already exists");
       }
       throw new Error(error.detail || "Registration failed");
     }
 
-    const tokens = await response.json();
+    const tokens: AuthTokens = await response.json();
     const userRes = await fetch(`${API_BASE_URL}/users/me`, {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
@@ -132,30 +136,18 @@ export const authService = {
   },
 
   /**
-   * Refresh access token using refresh token
+   * Refresh the access token via the httpOnly refresh cookie
    */
-  async refreshToken(refreshToken: string): Promise<AuthTokens> {
+  async refreshToken(): Promise<AuthTokens> {
     if (isDemoMode()) {
       return {
         access_token: "demo_access_token_" + Date.now(),
-        refresh_token: "demo_refresh_token_" + Date.now(),
+        refresh_token: null,
         token_type: "bearer",
+        expires_in: 1800,
       };
     }
-
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to refresh token");
-    }
-
-    return response.json();
+    return refreshTokenWithDedup();
   },
 
   /**
@@ -177,7 +169,6 @@ export const authService = {
 
     // Always return success for security (don't reveal if email exists)
     if (!response.ok) {
-      // Still return success to not reveal email existence
       return { message: "If an account exists, a reset email has been sent" };
     }
 
@@ -197,16 +188,13 @@ export const authService = {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ token, password }),
+      body: JSON.stringify({ token, new_password: password }),
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: "Reset failed" }));
-      if (error.detail?.includes("expired")) {
-        throw new Error("This reset link has expired. Please request a new one.");
-      }
-      if (error.detail?.includes("invalid")) {
-        throw new Error("This reset link is invalid. Please request a new one.");
+      if (error.detail?.includes("expired") || error.detail?.includes("Invalid")) {
+        throw new Error("This reset link is invalid or has expired. Please request a new one.");
       }
       throw new Error(error.detail || "Failed to reset password");
     }
@@ -225,13 +213,13 @@ export const authService = {
   },
 
   /**
-   * Resend verification email
+   * Resend verification email (for the logged-in account)
    */
-  async resendVerificationEmail(email: string): Promise<{ message: string }> {
+  async resendVerificationEmail(): Promise<{ message: string }> {
     if (isDemoMode()) {
       return { message: "Verification email sent" };
     }
-    return apiClient.post("/auth/resend-verification", { email });
+    return apiClient.post("/auth/resend-verification");
   },
 
   /**
@@ -255,7 +243,7 @@ export const authService = {
   },
 
   /**
-   * Change password (requires current password)
+   * Change password (requires current password; revokes other sessions)
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
     if (isDemoMode()) {
@@ -268,14 +256,24 @@ export const authService = {
   },
 
   /**
-   * Logout - invalidate tokens on server
+   * Logout - revokes the refresh session server-side and clears the cookie
    */
   async logout(): Promise<void> {
     if (isDemoMode()) {
       return;
     }
     try {
-      await apiClient.post("/auth/logout");
+      const token = (await import("@/stores")).useAuthStore.getState().tokens
+        ?.access_token;
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...WEB_HEADERS,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({}),
+      });
     } catch {
       // Ignore errors on logout - we're clearing local state anyway
     }
@@ -335,21 +333,5 @@ export const authService = {
   },
 };
 
-// ============================================
-// Token Refresh Utility
-// ============================================
-
-let refreshPromise: Promise<AuthTokens> | null = null;
-
-/**
- * Refresh token with deduplication
- * Ensures only one refresh request is made at a time
- */
-export async function refreshTokenWithDedup(refreshToken: string): Promise<AuthTokens> {
-  if (!refreshPromise) {
-    refreshPromise = authService.refreshToken(refreshToken).finally(() => {
-      refreshPromise = null;
-    });
-  }
-  return refreshPromise;
-}
+// Re-export for existing imports (hook uses this)
+export { refreshTokenWithDedup };

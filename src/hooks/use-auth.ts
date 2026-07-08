@@ -1,11 +1,17 @@
 /**
  * Auth Hook - Handles authentication state and token refresh
+ *
+ * v2 model: access token in memory only; refresh token in an httpOnly cookie.
+ * On a full page load the store has no tokens — bootstrapSession() exchanges
+ * the cookie for a fresh access token and re-fetches the profile.
  */
 
-import { useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useCallback, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
-import { authService, refreshTokenWithDedup } from "@/services/auth-service";
+import { authService } from "@/services/auth-service";
+import { isDemoMode } from "@/services/mock-api-service";
+import { isPublicRoute } from "@/lib/auth";
 
 // Refresh tokens 5 minutes before expiry
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
@@ -14,12 +20,16 @@ const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 const SESSION_CHECK_INTERVAL_MS = 60 * 1000;
 
 /**
- * Hook to manage authentication state and automatic token refresh
+ * Hook to manage authentication state and automatic token refresh.
+ * Mount ONCE via <AuthProvider> — it is the engine, not a per-component hook.
  */
 export function useAuth() {
   const router = useRouter();
+  const pathname = usePathname();
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sessionCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const bootstrapStartedRef = useRef(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   const {
     user,
@@ -31,28 +41,68 @@ export function useAuth() {
     login,
     logout,
     updateTokens,
+    setUser,
     updateActivity,
     checkSession,
     setRefreshing,
-    setError,
   } = useAuthStore();
 
   /**
-   * Refresh the access token
+   * Refresh the access token (via the httpOnly cookie)
    */
   const refreshToken = useCallback(async () => {
-    if (!tokens?.refresh_token || isRefreshing) return;
+    if (isRefreshing) return;
 
     try {
       setRefreshing(true);
-      const newTokens = await refreshTokenWithDedup(tokens.refresh_token);
+      const newTokens = await authService.refreshToken();
       updateTokens(newTokens);
     } catch (error) {
       console.error("Token refresh failed:", error);
       logout();
       router.push("/login?expired=true");
+    } finally {
+      setRefreshing(false);
     }
-  }, [tokens?.refresh_token, isRefreshing, setRefreshing, updateTokens, logout, router]);
+  }, [isRefreshing, setRefreshing, updateTokens, logout, router]);
+
+  /**
+   * Bootstrap after a full page load: cookie → access token → profile.
+   * Runs exactly once per app mount.
+   */
+  useEffect(() => {
+    if (bootstrapStartedRef.current) return;
+    bootstrapStartedRef.current = true;
+
+    const bootstrap = async () => {
+      // Demo mode or an in-memory session (client-side nav) needs no bootstrap
+      if (isDemoMode() || useAuthStore.getState().tokens?.access_token) {
+        setIsBootstrapping(false);
+        return;
+      }
+
+      try {
+        const newTokens = await authService.refreshToken();
+        updateTokens(newTokens);
+        const profile = await authService.getCurrentUser();
+        setUser(profile);
+        useAuthStore.getState().updateActivity();
+      } catch {
+        // No/invalid cookie — treat as logged out
+        logout();
+        if (!isPublicRoute(pathname ?? "/")) {
+          router.push("/login?expired=true");
+        }
+      } finally {
+        setIsBootstrapping(false);
+      }
+    };
+
+    // Nothing to restore on public pages without a session attempt cost —
+    // still try silently so "remember me" users land logged in.
+    void bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Schedule token refresh
@@ -157,6 +207,7 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     isRefreshing,
+    isBootstrapping,
     login,
     logout: handleLogout,
     refreshToken,

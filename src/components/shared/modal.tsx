@@ -282,6 +282,7 @@ function CompanyFormModal({ data, onClose }: { data?: Record<string, unknown> | 
 
   const [formData, setFormData] = React.useState<CreateCompanyInput>({
     name: existingCompany?.name || "",
+    slug: existingCompany?.slug || "",
     logo_url: existingCompany?.logo_url || "",
     careers_url: existingCompany?.careers_url || "",
     scraper_type: existingCompany?.scraper_type || "static",

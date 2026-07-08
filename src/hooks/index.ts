@@ -51,6 +51,9 @@ export {
   useSkills,
   useAddSkill,
   useRemoveSkill,
+  useAnalyzeCv,
+  useTailorCv,
+  useTaskStatus,
   cvKeys,
 } from "./use-cv";
 

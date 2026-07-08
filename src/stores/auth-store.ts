@@ -2,12 +2,11 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { User, AuthTokens } from "@/types";
-import { clearTokens } from "@/lib/auth";
 
 interface AuthState {
   // State
   user: User | null;
-  tokens: AuthTokens | null;
+  tokens: AuthTokens | null; // MEMORY ONLY — never persisted (see partialize)
   isAuthenticated: boolean;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -37,6 +36,25 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 // Token refresh threshold: 5 minutes before expiry
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 
+const DEFAULT_ACCESS_TTL_MS = 30 * 60 * 1000;
+
+function expiryFrom(tokens: AuthTokens): number {
+  return Date.now() + (tokens.expires_in ? tokens.expires_in * 1000 : DEFAULT_ACCESS_TTL_MS);
+}
+
+/** Remove auth artifacts of the pre-httpOnly-cookie era. */
+function purgeLegacyStorage() {
+  if (typeof window === "undefined") return;
+  ["jobscout_access_token", "jobscout_refresh_token", "jobscout_token_expiry", "jobscout_remember_me"].forEach(
+    (key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
+  );
+  // Legacy JS-readable cookie (replaced by the httpOnly jobscout_refresh cookie)
+  document.cookie = "jobscout_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+}
+
 const initialState = {
   user: null,
   tokens: null,
@@ -65,8 +83,7 @@ export const useAuthStore = create<AuthState>()(
         set((state) => {
           state.tokens = tokens;
           if (tokens) {
-            // Set session expiry based on token (assuming 30 min access token)
-            state.sessionExpiry = Date.now() + 30 * 60 * 1000;
+            state.sessionExpiry = expiryFrom(tokens);
           }
         }),
 
@@ -86,28 +103,21 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       login: (user, tokens) => {
+        purgeLegacyStorage();
         set((state) => {
           state.user = user;
           state.tokens = tokens;
           state.isAuthenticated = true;
           state.error = null;
           state.lastActivity = Date.now();
-          state.sessionExpiry = Date.now() + 30 * 60 * 1000;
+          state.sessionExpiry = expiryFrom(tokens);
         });
-        // Set cookie so SSR middleware can read it for redirects
-        if (typeof window !== "undefined") {
-          document.cookie = `jobscout_access_token=${tokens.access_token}; path=/; max-age=86400`;
-        }
+        // No cookie writes here: the refresh token is an httpOnly cookie set
+        // by the backend; middleware reads THAT for route protection.
       },
 
       logout: () => {
-        // Clear tokens from storage
-        clearTokens();
-        // Clear cookie
-        if (typeof window !== "undefined") {
-          document.cookie = "jobscout_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        }
-        // Reset state
+        purgeLegacyStorage();
         set((state) => {
           Object.assign(state, initialState);
         });
@@ -123,12 +133,8 @@ export const useAuthStore = create<AuthState>()(
       updateTokens: (tokens) =>
         set((state) => {
           state.tokens = tokens;
-          state.sessionExpiry = Date.now() + 30 * 60 * 1000;
+          state.sessionExpiry = expiryFrom(tokens);
           state.isRefreshing = false;
-          // Update cookie
-          if (typeof window !== "undefined") {
-            document.cookie = `jobscout_access_token=${tokens.access_token}; path=/; max-age=86400`;
-          }
         }),
 
       clearError: () =>
@@ -149,8 +155,9 @@ export const useAuthStore = create<AuthState>()(
 
         const now = Date.now();
 
-        // Check if session has expired
-        if (now > state.sessionExpiry) {
+        // Session expiry is refreshed by the token-refresh cycle; a stale one
+        // means refresh has been failing.
+        if (now > state.sessionExpiry + REFRESH_THRESHOLD_MS) {
           get().logout();
           return false;
         }
@@ -171,14 +178,20 @@ export const useAuthStore = create<AuthState>()(
     })),
     {
       name: "jobscout-auth",
+      version: 2, // v2: tokens are no longer persisted (httpOnly cookie model)
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
-        tokens: state.tokens,
-        isAuthenticated: state.isAuthenticated,
         lastActivity: state.lastActivity,
-        sessionExpiry: state.sessionExpiry,
       }),
+      migrate: (persisted: unknown) => {
+        // Drop tokens/expiry persisted by v1
+        const p = (persisted ?? {}) as Record<string, unknown>;
+        return {
+          user: p.user ?? null,
+          lastActivity: (p.lastActivity as number) ?? null,
+        };
+      },
     }
   )
 );
@@ -190,7 +203,6 @@ export const selectAuthLoading = (state: AuthState) => state.isLoading;
 export const selectIsRefreshing = (state: AuthState) => state.isRefreshing;
 export const selectAuthError = (state: AuthState) => state.error;
 export const selectAccessToken = (state: AuthState) => state.tokens?.access_token;
-export const selectRefreshToken = (state: AuthState) => state.tokens?.refresh_token;
 
 // Computed selectors
 export const selectShouldRefreshToken = (state: AuthState): boolean => {

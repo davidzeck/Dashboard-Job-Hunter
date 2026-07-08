@@ -10,7 +10,6 @@ import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Check } from "lucide-react";
 import { registerSchema, type RegisterFormData } from "@/lib/validations/auth";
 import { useAuthStore, useToast } from "@/stores";
 import { authService } from "@/services";
-import { storeTokens } from "@/lib/auth";
 import {
   Button,
   Input,
@@ -64,16 +63,11 @@ export function RegisterForm() {
         full_name: data.fullName,
       });
 
-      // Store tokens
-      storeTokens(response.tokens, true);
-
-      // Update auth store
+      // Access token → memory (store); refresh token → httpOnly cookie set
+      // by the backend.
       login(response.user, response.tokens);
 
-      // Set cookie for middleware
-      document.cookie = `jobscout_access_token=${response.tokens.access_token}; path=/; max-age=${86400 * 30}`;
-
-      toast.success("Account created!", "Welcome to Job Scout");
+      toast.success("Account created!", "Check your inbox to verify your email");
 
       router.push("/overview");
     } catch (error) {

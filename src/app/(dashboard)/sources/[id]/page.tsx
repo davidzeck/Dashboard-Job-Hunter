@@ -66,6 +66,9 @@ export default function SourceDetailPage() {
           company: {
             id: "company-1",
             name: "Safaricom",
+            slug: "safaricom",
+            jobs_count: 8,
+            sources_count: 1,
             logo_url: undefined,
             careers_url: "https://safaricom.co.ke/careers",
             is_active: true,
@@ -466,6 +469,8 @@ function ScrapeStatusBadge({ status }: { status: ScrapeLog["status"] }) {
   const configs: Record<ScrapeLog["status"], { icon: React.ElementType; className: string }> = {
     started: { icon: Loader2, className: "text-primary" },
     completed: { icon: CheckCircle, className: "text-success" },
+    success: { icon: CheckCircle, className: "text-success" },
+    partial: { icon: CheckCircle, className: "text-warning" },
     failed: { icon: XCircle, className: "text-destructive" },
   };
 

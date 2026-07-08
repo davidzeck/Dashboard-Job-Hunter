@@ -170,7 +170,7 @@ export default function CompanyDetailPage() {
           <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Settings className="h-4 w-4" />
-              {scraperTypeLabels[company.scraper_type] || company.scraper_type}
+              {scraperTypeLabels[company.scraper_type ?? ""] || company.scraper_type || "Unknown"}
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4" />

@@ -130,7 +130,7 @@ export function CompanyCard({
               <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Briefcase className="h-3 w-3" />
-                  {scraperTypeLabels[company.scraper_type] || company.scraper_type}
+                  {scraperTypeLabels[company.scraper_type ?? ""] || company.scraper_type || "Unknown"}
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">

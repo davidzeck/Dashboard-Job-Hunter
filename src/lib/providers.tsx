@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useUIStore } from "@/stores";
 import { ToastContainer, ModalProvider } from "@/components/shared";
+import { AuthProvider } from "@/components/providers/auth-provider";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -25,9 +26,11 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        {children}
-        <ToastContainer />
-        <ModalProvider />
+        <AuthProvider>
+          {children}
+          <ToastContainer />
+          <ModalProvider />
+        </AuthProvider>
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

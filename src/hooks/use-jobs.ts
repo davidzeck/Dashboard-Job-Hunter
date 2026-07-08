@@ -11,14 +11,16 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  useAuthStore,
   useJobsStore,
   useToast,
+  selectIsAdmin,
   selectJobsFilters,
   selectJobsSort,
   selectJobsPagination,
   type JobsState,
 } from "@/stores";
-import { jobsService } from "@/services";
+import { jobsService, isDemoMode } from "@/services";
 import type { Job, PaginatedResponse } from "@/types";
 
 // ============================================
@@ -163,9 +165,12 @@ export function useNewJobs(limit: number = 10) {
 }
 
 export function useDashboardStats() {
+  // /dashboard/stats is admin-only (403 for normal users) — don't even ask
+  const isAdmin = useAuthStore(selectIsAdmin);
   return useQuery({
     queryKey: jobsKeys.stats(),
     queryFn: () => jobsService.getDashboardStats(),
     refetchInterval: 30000, // Refresh every 30 seconds
+    enabled: isAdmin || isDemoMode(),
   });
 }

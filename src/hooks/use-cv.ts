@@ -9,7 +9,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/stores";
 import { cvService } from "@/services/cv-service";
-import type { CVResponse } from "@/services/cv-service";
+import type {
+  CVResponse,
+  CVAnalysisResult,
+  CVTailorResult,
+  CVTaskStatusResponse,
+} from "@/services/cv-service";
 
 // ============================================
 // Query Keys
@@ -19,6 +24,12 @@ export const cvKeys = {
   all: ["cv"] as const,
   list: () => [...cvKeys.all, "list"] as const,
   skills: () => [...cvKeys.all, "skills"] as const,
+  analysis: (cvId: string, jobId: string) =>
+    [...cvKeys.all, "analysis", cvId, jobId] as const,
+  tailor: (cvId: string, jobId: string) =>
+    [...cvKeys.all, "tailor", cvId, jobId] as const,
+  taskStatus: (taskId: string) =>
+    [...cvKeys.all, "task", taskId] as const,
 };
 
 // ============================================
@@ -133,6 +144,63 @@ export function useRemoveSkill() {
     },
     onError: (error: Error) => {
       toast.error("Failed to remove skill", error.message);
+    },
+  });
+}
+
+// ============================================
+// AI / ATS Hooks
+// ============================================
+
+/** Trigger CV analysis against a job. Returns cached result or task_id for polling. */
+export function useAnalyzeCv() {
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: ({ cvId, jobId }: { cvId: string; jobId: string }) =>
+      cvService.analyzeCv(cvId, jobId),
+    onError: (error: Error) => {
+      if (error.message.includes("429")) {
+        toast.error("Rate limited", "You've reached the analysis limit. Try again later.");
+      } else {
+        toast.error("Analysis failed", error.message);
+      }
+    },
+  });
+}
+
+/** Trigger CV tailoring for a job. Always async — poll with useTaskStatus. */
+export function useTailorCv() {
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: ({ cvId, jobId }: { cvId: string; jobId: string }) =>
+      cvService.tailorCv(cvId, jobId),
+    onError: (error: Error) => {
+      if (error.message.includes("429")) {
+        toast.error("Rate limited", "You've reached the tailoring limit. Try again later.");
+      } else {
+        toast.error("Tailoring failed", error.message);
+      }
+    },
+  });
+}
+
+/**
+ * Poll a Celery task status. Automatically polls every 2s until terminal state.
+ * Pass null to disable polling.
+ */
+export function useTaskStatus<T = CVAnalysisResult | CVTailorResult>(
+  taskId: string | null
+) {
+  return useQuery({
+    queryKey: cvKeys.taskStatus(taskId ?? ""),
+    queryFn: () => cvService.getTaskStatus<T>(taskId!),
+    enabled: !!taskId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === "success" || status === "failure") return false;
+      return 2000;
     },
   });
 }
