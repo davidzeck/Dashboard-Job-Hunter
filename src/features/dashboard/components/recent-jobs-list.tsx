@@ -21,6 +21,7 @@ interface RecentJobsListProps {
   jobs: Job[];
   isLoading?: boolean;
   onJobClick?: (job: Job) => void;
+  onViewAll?: () => void;
   className?: string;
 }
 
@@ -28,6 +29,7 @@ export function RecentJobsList({
   jobs,
   isLoading,
   onJobClick,
+  onViewAll,
   className,
 }: RecentJobsListProps) {
   if (isLoading) {
@@ -58,6 +60,17 @@ export function RecentJobsList({
               onClick={() => onJobClick?.(job)}
             />
           ))
+        )}
+        {onViewAll && jobs.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center gap-1"
+            onClick={onViewAll}
+          >
+            View all new jobs
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
         )}
       </CardContent>
     </Card>

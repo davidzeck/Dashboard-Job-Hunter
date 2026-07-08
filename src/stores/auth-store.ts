@@ -178,17 +178,18 @@ export const useAuthStore = create<AuthState>()(
     })),
     {
       name: "jobscout-auth",
-      version: 2, // v2: tokens are no longer persisted (httpOnly cookie model)
+      // v3: the user profile is no longer persisted either — it's authoritative
+      // from the server on every load (via /auth/refresh). Persisting it risked
+      // stale state (e.g. is_admin drift). Only non-sensitive UI state remains.
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        user: state.user,
         lastActivity: state.lastActivity,
       }),
       migrate: (persisted: unknown) => {
-        // Drop tokens/expiry persisted by v1
+        // Drop any user/tokens/expiry persisted by v1/v2.
         const p = (persisted ?? {}) as Record<string, unknown>;
         return {
-          user: p.user ?? null,
           lastActivity: (p.lastActivity as number) ?? null,
         };
       },

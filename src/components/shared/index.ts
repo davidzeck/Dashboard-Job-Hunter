@@ -16,6 +16,7 @@ export {
 export { CommandPalette } from "./command-palette";
 export { ErrorBoundary, ErrorFallback, PageError } from "./error-boundary";
 export { EmptyState, InlineEmptyState } from "./empty-state";
+export { AppShellSkeleton } from "./app-shell-skeleton";
 export {
   Skeleton,
   CardSkeleton,

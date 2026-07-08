@@ -7,6 +7,7 @@ import { apiClient } from "./api-client";
 import { isDemoMode, mockJobsService } from "./mock-api-service";
 import type {
   Job,
+  JobInteraction,
   JobFilters,
   SortConfig,
   PaginatedResponse,
@@ -37,6 +38,9 @@ function transformJob(raw: Record<string, unknown>): Job {
     status: (raw.status as Job["status"]) ?? (raw.is_active ? "active" : "expired"),
     // source_id not present in list response — default to empty
     source_id: (raw.source_id as string) ?? "",
+    // per-user persisted actions
+    saved: Boolean(raw.saved),
+    applied: Boolean(raw.applied),
   };
 }
 
@@ -55,6 +59,8 @@ export const jobsService = {
       limit: params.page_size || 20,
       role: params.search,
       location: params.location,
+      location_type: params.location_type,
+      days_ago: params.days_ago,
     });
 
     return {
@@ -107,13 +113,39 @@ export const jobsService = {
   },
 
   /**
-   * Update job status
+   * Save / unsave a job for the current user (persisted)
    */
-  async updateJobStatus(id: string, status: Job["status"]): Promise<Job> {
+  async setJobSaved(id: string, saved: boolean): Promise<JobInteraction> {
     if (isDemoMode()) {
-      return mockJobsService.updateJobStatus(id, status);
+      return { job_id: id, saved, applied: false };
     }
-    return apiClient.patch<Job>(`/jobs/${id}`, { status });
+    return apiClient.put<JobInteraction>(`/jobs/${id}/saved`, { saved });
+  },
+
+  /**
+   * Mark a job applied / not-applied for the current user (persisted)
+   */
+  async setJobApplied(id: string, applied: boolean): Promise<JobInteraction> {
+    if (isDemoMode()) {
+      return { job_id: id, saved: false, applied };
+    }
+    return apiClient.put<JobInteraction>(`/jobs/${id}/applied`, { applied });
+  },
+
+  /**
+   * Get the jobs the current user has saved
+   */
+  async getSavedJobs(
+    params: { page?: number; page_size?: number } = {}
+  ): Promise<PaginatedResponse<Job>> {
+    if (isDemoMode()) {
+      return mockJobsService.getJobs(params);
+    }
+    const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>(
+      "/jobs/saved",
+      { page: params.page || 1, limit: params.page_size || 20 }
+    );
+    return { ...response, items: response.items.map(transformJob) };
   },
 
   /**

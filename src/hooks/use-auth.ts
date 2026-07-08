@@ -82,10 +82,13 @@ export function useAuth() {
       }
 
       try {
-        const newTokens = await authService.refreshToken();
-        updateTokens(newTokens);
-        const profile = await authService.getCurrentUser();
-        setUser(profile);
+        // /auth/refresh now returns the profile too (applied by token-refresh),
+        // so a single round-trip bootstraps the session. Fall back to /users/me
+        // only if the user somehow wasn't included.
+        await authService.refreshToken();
+        if (!useAuthStore.getState().user) {
+          setUser(await authService.getCurrentUser());
+        }
         useAuthStore.getState().updateActivity();
       } catch {
         // No/invalid cookie — treat as logged out

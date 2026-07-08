@@ -35,7 +35,8 @@ import {
 } from "@/components/ui";
 import { PageHeader } from "@/components/layout";
 import { CVMatchCard } from "@/features/jobs/components";
-import { useJobsStore, useToast } from "@/stores";
+import { useJob, useToggleSaveJob, useToggleAppliedJob } from "@/hooks";
+import { useToast } from "@/stores";
 import type { Job } from "@/types";
 
 export default function JobDetailPage() {
@@ -44,92 +45,13 @@ export default function JobDetailPage() {
   const toast = useToast();
   const jobId = params.id as string;
 
-  // Get job from store or fetch
-  const jobs = useJobsStore((state) => state.jobs);
-  const selectedJob = useJobsStore((state) => state.selectedJob);
-  const setSelectedJob = useJobsStore((state) => state.setSelectedJob);
+  // Real fetch by id (works on hard refresh / deep link — no mock fallback)
+  const { data: job, isLoading, isError } = useJob(jobId);
+  const saveJob = useToggleSaveJob();
+  const appliedJob = useToggleAppliedJob();
 
-  // Local state
-  const [job, setJob] = React.useState<Job | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSaved, setIsSaved] = React.useState(false);
-
-  // Find or fetch job
-  React.useEffect(() => {
-    const foundJob = jobs.find((j) => j.id === jobId);
-    if (foundJob) {
-      setJob(foundJob);
-      setSelectedJob(foundJob);
-      setIsLoading(false);
-    } else if (selectedJob?.id === jobId) {
-      setJob(selectedJob);
-      setIsLoading(false);
-    } else {
-      // Simulate API fetch with mock data
-      setTimeout(() => {
-        const mockJob: Job = {
-          id: jobId,
-          title: "Senior Software Engineer",
-          company_id: "company-1",
-          company: {
-            id: "company-1",
-            name: "Safaricom",
-            slug: "safaricom",
-            jobs_count: 8,
-            sources_count: 1,
-            logo_url: undefined,
-            careers_url: "https://safaricom.co.ke/careers",
-            is_active: true,
-            scraper_type: "dynamic",
-            scrape_frequency_hours: 12,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          source_id: "source-1",
-          description: `We are looking for a Senior Software Engineer to join our team at Safaricom. You will be responsible for designing, developing, and maintaining high-quality software solutions that power our mobile money and communications services.
-
-## Key Responsibilities
-- Design and implement scalable backend systems
-- Lead technical discussions and code reviews
-- Mentor junior developers and contribute to engineering best practices
-- Collaborate with product managers and designers to deliver user-centric solutions
-- Optimize application performance and ensure system reliability
-- Participate in on-call rotations for production systems
-
-## What We're Looking For
-- 5+ years of experience in software development
-- Strong proficiency in Python, Go, or Java
-- Experience with microservices architecture and distributed systems
-- Familiarity with cloud platforms (AWS, GCP, or Azure)
-- Excellent problem-solving and communication skills
-- Bachelor's degree in Computer Science or related field`,
-          requirements: [
-            "5+ years of software development experience",
-            "Proficiency in Python, Go, or Java",
-            "Experience with microservices and distributed systems",
-            "Cloud platform experience (AWS/GCP/Azure)",
-            "Strong communication skills",
-            "Bachelor's degree in CS or related field",
-          ],
-          location: "Nairobi, Kenya",
-          job_type: "full_time",
-          experience_level: "senior",
-          salary_min: 300000,
-          salary_max: 500000,
-          salary_currency: "KES",
-          application_url: "https://safaricom.co.ke/careers/apply/12345",
-          status: "new",
-          first_seen_at: new Date(Date.now() - 86400000).toISOString(),
-          last_seen_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        setJob(mockJob);
-        setSelectedJob(mockJob);
-        setIsLoading(false);
-      }, 500);
-    }
-  }, [jobId, jobs, selectedJob, setSelectedJob]);
+  const isSaved = job?.saved ?? false;
+  const isApplied = job?.applied ?? false;
 
   // Handlers
   const handleBack = () => {
@@ -143,11 +65,15 @@ export default function JobDetailPage() {
   };
 
   const handleSave = () => {
-    setIsSaved(!isSaved);
-    toast.success(
-      isSaved ? "Job removed" : "Job saved",
-      isSaved ? "Job removed from saved list" : "Job added to your saved list"
-    );
+    if (job) {
+      saveJob.mutate({ id: job.id, saved: !isSaved });
+    }
+  };
+
+  const handleToggleApplied = () => {
+    if (job) {
+      appliedJob.mutate({ id: job.id, applied: !isApplied });
+    }
   };
 
   const handleShare = () => {
@@ -159,7 +85,7 @@ export default function JobDetailPage() {
     return <JobDetailSkeleton />;
   }
 
-  if (!job) {
+  if (isError || !job) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
@@ -412,9 +338,19 @@ export default function JobDetailPage() {
                 Apply Now
               </Button>
               <Button
+                variant={isApplied ? "default" : "outline"}
+                className="w-full gap-2"
+                onClick={handleToggleApplied}
+                disabled={appliedJob.isPending}
+              >
+                <CheckCircle className="h-4 w-4" />
+                {isApplied ? "Applied ✓" : "Mark as applied"}
+              </Button>
+              <Button
                 variant="outline"
                 className="w-full gap-2"
                 onClick={handleSave}
+                disabled={saveJob.isPending}
               >
                 {isSaved ? (
                   <BookmarkCheck className="h-4 w-4" />

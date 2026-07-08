@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   RefreshCw,
   Download,
@@ -9,6 +9,7 @@ import {
   Trash2,
   MoreHorizontal,
   CheckSquare,
+  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/layout";
@@ -20,14 +21,16 @@ import {
   ViewToggle,
   type ViewMode,
 } from "@/features/jobs/components";
-import { useJobs } from "@/hooks";
+import { useJobs, useToggleSaveJob } from "@/hooks";
 import { useJobsStore, useUIStore, useToast } from "@/stores";
 import type { Job, JobFilters, SortConfig } from "@/types";
 
 export default function JobsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const { isLoading, refetch } = useJobs();
+  const saveJob = useToggleSaveJob();
 
   // Store state
   const jobs = useJobsStore((state) => state.jobs);
@@ -43,7 +46,11 @@ export default function JobsPage() {
   // Local state
   const [viewMode, setViewMode] = React.useState<ViewMode>("grid");
   const [selectedJobs, setSelectedJobs] = React.useState<string[]>([]);
-  const [savedJobs, setSavedJobs] = React.useState<string[]>([]);
+  // Saved state is server-driven — derive from the jobs' persisted `saved` flag
+  const savedJobs = React.useMemo(
+    () => jobs.filter((j) => j.saved).map((j) => j.id),
+    [jobs]
+  );
 
   // Selection handlers
   const handleSelectJob = (jobId: string) => {
@@ -66,24 +73,34 @@ export default function JobsPage() {
     setSelectedJobs([]);
   };
 
+  // "New (24h)" vs "All" segmented toggle — drives the backend days_ago filter
+  const isNewOnly = filters.days_ago === 1;
+  const showNewOnly = () => {
+    setFilters({ days_ago: 1 });
+    setPage(1);
+  };
+  const showAll = () => {
+    setFilters({ days_ago: undefined });
+    setPage(1);
+  };
+
+  // Deep link from the Overview "New Jobs" card: /jobs?new=1 lands pre-filtered.
+  const appliedNewParam = React.useRef(false);
+  React.useEffect(() => {
+    if (!appliedNewParam.current && searchParams.get("new") === "1") {
+      appliedNewParam.current = true;
+      setFilters({ days_ago: 1 });
+    }
+  }, [searchParams, setFilters]);
+
   // Job actions
   const handleJobClick = (job: Job) => {
     router.push(`/jobs/${job.id}`);
   };
 
   const handleSaveJob = (job: Job) => {
-    const isSaved = savedJobs.includes(job.id);
-    setSavedJobs((prev) =>
-      prev.includes(job.id)
-        ? prev.filter((id) => id !== job.id)
-        : [...prev, job.id]
-    );
-    toast.success(
-      isSaved ? "Job removed" : "Job saved",
-      isSaved
-        ? "Job removed from saved list"
-        : "Job added to your saved list"
-    );
+    // Toggle persisted saved state; toast + refetch handled by the mutation
+    saveJob.mutate({ id: job.id, saved: !job.saved });
   };
 
   const handleShareJob = (job: Job) => {
@@ -112,10 +129,7 @@ export default function JobsPage() {
   };
 
   const handleBulkSave = () => {
-    setSavedJobs((prev) => {
-      const combined = prev.concat(selectedJobs);
-      return combined.filter((id, index) => combined.indexOf(id) === index);
-    });
+    selectedJobs.forEach((id) => saveJob.mutate({ id, saved: true }));
     toast.success("Jobs saved", `${selectedJobs.length} jobs added to saved list`);
     clearSelection();
   };
@@ -125,9 +139,33 @@ export default function JobsPage() {
       {/* Header */}
       <PageHeader
         title="Jobs"
-        description={`${pagination.total} jobs discovered from all sources`}
+        description={
+          isNewOnly
+            ? `${pagination.total} new in the last 24 hours`
+            : `${pagination.total} jobs discovered from all sources`
+        }
         actions={
           <div className="flex items-center gap-2">
+            {/* All | New (24h) segmented toggle */}
+            <div className="inline-flex items-center rounded-md border border-border p-0.5">
+              <Button
+                variant={isNewOnly ? "ghost" : "secondary"}
+                size="sm"
+                className="h-7"
+                onClick={showAll}
+              >
+                All
+              </Button>
+              <Button
+                variant={isNewOnly ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 gap-1.5"
+                onClick={showNewOnly}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                New (24h)
+              </Button>
+            </div>
             <ViewToggle value={viewMode} onChange={setViewMode} />
             <Button
               variant="outline"

@@ -11,7 +11,9 @@ export {
 export {
   useJobs,
   useJob,
-  useUpdateJobStatus,
+  useToggleSaveJob,
+  useToggleAppliedJob,
+  useSavedJobs,
   useNewJobs,
   useDashboardStats,
   jobsKeys,

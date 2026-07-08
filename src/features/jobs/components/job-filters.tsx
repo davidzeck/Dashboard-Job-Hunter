@@ -35,7 +35,7 @@ interface JobFiltersBarProps {
 
 // Filter presets for quick access
 const FILTER_PRESETS = [
-  { id: "new_today", label: "New Today", filters: { status: "new" as JobStatus } },
+  { id: "new_today", label: "New Today", filters: { days_ago: 1 } },
   { id: "remote", label: "Remote", filters: { job_type: "remote" as JobType } },
   { id: "senior", label: "Senior+", filters: { experience_level: "senior" as ExperienceLevel } },
   { id: "entry", label: "Entry Level", filters: { experience_level: "entry" as ExperienceLevel } },
@@ -50,9 +50,10 @@ export function JobFiltersBar({
 }: JobFiltersBarProps) {
   const [showAdvanced, setShowAdvanced] = React.useState(false);
 
-  // Count active filters (excluding search)
+  // Count active filters (excluding search + the toggle-owned days_ago/location_type)
+  const CHIP_EXCLUDE = ["search", "days_ago", "location_type"];
   const activeFilterCount = Object.entries(filters).filter(
-    ([key, value]) => value !== undefined && value !== "" && key !== "search"
+    ([key, value]) => value !== undefined && value !== "" && !CHIP_EXCLUDE.includes(key)
   ).length;
 
   // Handle search with debounce
@@ -275,7 +276,7 @@ export function JobFiltersBar({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-muted-foreground">Active filters:</span>
           {Object.entries(filters).map(([key, value]) => {
-            if (!value || key === "search") return null;
+            if (!value || CHIP_EXCLUDE.includes(key)) return null;
             return (
               <Badge
                 key={key}
@@ -283,7 +284,7 @@ export function JobFiltersBar({
                 className="gap-1 cursor-pointer hover:bg-destructive/20"
                 onClick={() => onFilterChange({ [key]: undefined })}
               >
-                {formatFilterLabel(key, value as string)}
+                {formatFilterLabel(key, value)}
                 <X className="h-3 w-3" />
               </Badge>
             );
@@ -431,18 +432,22 @@ function SalaryRangeFilter({ min, max, onChange }: SalaryRangeFilterProps) {
   );
 }
 
-// Helper to format filter labels
-function formatFilterLabel(key: string, value: string): string {
+// Helper to format filter labels. Accepts unknown and coerces to a string so a
+// non-string value (e.g. numeric days_ago) can never crash on `.replace`.
+function formatFilterLabel(key: string, value: unknown): string {
+  const v = String(value);
   const labels: Record<string, string> = {
-    status: `Status: ${value}`,
-    job_type: `Type: ${value.replace("_", " ")}`,
-    experience_level: `Level: ${value}`,
+    status: `Status: ${v}`,
+    job_type: `Type: ${v.replace("_", " ")}`,
+    experience_level: `Level: ${v}`,
     company_id: `Company`,
-    location: `Location: ${value}`,
-    date_from: `From: ${value}`,
-    date_to: `To: ${value}`,
+    location: `Location: ${v}`,
+    location_type: `Location: ${v}`,
+    days_ago: v === "1" ? "New (24h)" : `Last ${v} days`,
+    date_from: `From: ${v}`,
+    date_to: `To: ${v}`,
     salary_min: `Min salary`,
     salary_max: `Max salary`,
   };
-  return labels[key] || `${key}: ${value}`;
+  return labels[key] || `${key}: ${v}`;
 }

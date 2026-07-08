@@ -134,21 +134,47 @@ export function useJob(id: string) {
 // Mutation Hooks
 // ============================================
 
-export function useUpdateJobStatus() {
+export function useToggleSaveJob() {
   const queryClient = useQueryClient();
   const toast = useToast();
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Job["status"] }) =>
-      jobsService.updateJobStatus(id, status),
-    onSuccess: () => {
-      // Invalidate list to refetch from API (single source of truth)
+    mutationFn: ({ id, saved }: { id: string; saved: boolean }) =>
+      jobsService.setJobSaved(id, saved),
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: jobsKeys.lists() });
-      toast.success("Job status updated");
+      queryClient.invalidateQueries({ queryKey: jobsKeys.detail(res.job_id) });
+      queryClient.invalidateQueries({ queryKey: [...jobsKeys.all, "saved"] });
+      toast.success(res.saved ? "Job saved" : "Removed from saved");
     },
     onError: (error: Error) => {
-      toast.error("Failed to update job", error.message);
+      toast.error("Failed to save job", error.message);
     },
+  });
+}
+
+export function useToggleAppliedJob() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, applied }: { id: string; applied: boolean }) =>
+      jobsService.setJobApplied(id, applied),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: jobsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: jobsKeys.detail(res.job_id) });
+      toast.success(res.applied ? "Marked as applied" : "Applied status cleared");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update", error.message);
+    },
+  });
+}
+
+export function useSavedJobs(params: { page?: number; page_size?: number } = {}) {
+  return useQuery({
+    queryKey: [...jobsKeys.all, "saved", params],
+    queryFn: () => jobsService.getSavedJobs(params),
   });
 }
 

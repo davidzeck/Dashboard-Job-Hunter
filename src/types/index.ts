@@ -90,6 +90,16 @@ export interface Job {
   expires_at?: string;
   created_at: string;
   updated_at: string;
+  // Current user's persisted actions on this job
+  saved?: boolean;
+  applied?: boolean;
+}
+
+// Response from PUT /jobs/:id/saved | /jobs/:id/applied
+export interface JobInteraction {
+  job_id: string;
+  saved: boolean;
+  applied: boolean;
 }
 
 // Scrape Log Types
@@ -160,6 +170,8 @@ export interface JobFilters {
   experience_level?: ExperienceLevel;
   job_type?: JobType;
   location?: string;
+  location_type?: string; // 'remote' | 'onsite' | 'hybrid' — backend filter
+  days_ago?: number; // jobs discovered in the last N days ("New" = 1)
   date_from?: string;
   date_to?: string;
 }

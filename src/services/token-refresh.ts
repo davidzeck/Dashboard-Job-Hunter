@@ -8,7 +8,7 @@
  */
 
 import { useAuthStore } from "@/stores";
-import type { AuthTokens } from "@/types";
+import type { AuthTokens, User } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
@@ -28,8 +28,13 @@ async function doRefresh(): Promise<AuthTokens> {
     throw new Error("Failed to refresh session");
   }
 
-  const tokens: AuthTokens = await response.json();
-  useAuthStore.getState().updateTokens(tokens);
+  const body: AuthTokens & { user?: User } = await response.json();
+  const { user, ...tokens } = body;
+  const store = useAuthStore.getState();
+  store.updateTokens(tokens);
+  // The backend now returns the profile on refresh, so bootstrap needs no
+  // follow-up GET /users/me. Keep the profile fresh on every proactive refresh.
+  if (user) store.setUser(user);
   return tokens;
 }
 

@@ -14,18 +14,16 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { isPublicRoute } from "@/lib/auth";
+import { AppShellSkeleton } from "@/components/shared";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { isBootstrapping } = useAuth();
   const pathname = usePathname();
 
-  // Public pages render immediately; app pages wait for the session attempt
+  // Public pages render immediately; app pages show the app-shell skeleton
+  // while the (single-round-trip) session bootstrap resolves.
   if (isBootstrapping && !isPublicRoute(pathname ?? "/")) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <AppShellSkeleton />;
   }
 
   return <>{children}</>;

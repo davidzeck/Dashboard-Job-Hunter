@@ -223,6 +223,7 @@ export default function OverviewPage() {
           jobs={newJobs || []}
           isLoading={jobsLoading}
           onJobClick={handleJobClick}
+          onViewAll={() => router.push("/jobs?new=1")}
           className="lg:col-span-1"
         />
 
