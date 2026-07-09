@@ -22,23 +22,8 @@ import {
   Button,
   Badge,
 } from "@/components/ui";
-
-// Activity types
-type ActivityType = "job_found" | "scrape_completed" | "scrape_failed" | "source_added" | "alert_sent" | "company_added";
-
-interface ActivityItem {
-  id: string;
-  type: ActivityType;
-  title: string;
-  description: string;
-  timestamp: string;
-  metadata?: {
-    companyName?: string;
-    jobCount?: number;
-    sourceName?: string;
-    errorMessage?: string;
-  };
-}
+// Canonical activity types live in the dashboard service (single source of truth)
+import type { ActivityType, ActivityItem } from "@/services/dashboard-service";
 
 interface ActivityFeedProps {
   activities: ActivityItem[];
@@ -256,56 +241,3 @@ function ActivityFeedSkeleton() {
   );
 }
 
-// Generate mock data for development
-export function generateMockActivityData(count: number = 10): ActivityItem[] {
-  const types: ActivityType[] = [
-    "job_found",
-    "scrape_completed",
-    "scrape_failed",
-    "source_added",
-    "alert_sent",
-  ];
-
-  const companies = ["Google", "Microsoft", "Amazon", "Meta", "Safaricom", "Deloitte"];
-
-  return Array.from({ length: count }).map((_, i) => {
-    const type = types[Math.floor(Math.random() * types.length)];
-    const company = companies[Math.floor(Math.random() * companies.length)];
-    const timestamp = new Date(Date.now() - i * 1000 * 60 * Math.floor(Math.random() * 60));
-
-    const configs: Record<ActivityType, { title: string; description: string }> = {
-      job_found: {
-        title: `${Math.floor(Math.random() * 5) + 1} new jobs at ${company}`,
-        description: `Software Engineer, Product Manager, and more`,
-      },
-      scrape_completed: {
-        title: `${company} scrape completed`,
-        description: `Found ${Math.floor(Math.random() * 10) + 1} jobs in ${Math.floor(Math.random() * 30) + 5}s`,
-      },
-      scrape_failed: {
-        title: `${company} scrape failed`,
-        description: `Unable to fetch careers page`,
-      },
-      source_added: {
-        title: `New source added`,
-        description: `${company} careers page`,
-      },
-      alert_sent: {
-        title: `Alert sent`,
-        description: `Notified 5 users about new ${company} jobs`,
-      },
-      company_added: {
-        title: `Company added`,
-        description: `${company} added to tracking`,
-      },
-    };
-
-    return {
-      id: `activity-${i}`,
-      type,
-      ...configs[type],
-      timestamp: timestamp.toISOString(),
-      metadata: type === "scrape_failed" ? { errorMessage: "Connection timeout" } : undefined,
-    };
-  });
-}

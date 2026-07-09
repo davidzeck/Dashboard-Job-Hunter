@@ -6,7 +6,7 @@ export { sourcesService } from "./sources-service";
 export { companiesService } from "./companies-service";
 export { settingsService } from "./settings-service";
 export { cvService } from "./cv-service";
-export { isDemoMode } from "./mock-api-service";
+export { dashboardService } from "./dashboard-service";
 export type {
   NotificationSettings,
   JobAlertPreferences,

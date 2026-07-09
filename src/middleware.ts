@@ -29,11 +29,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Demo mode has no backend and therefore no cookie — let everything through
-  if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
-    return NextResponse.next();
-  }
-
   const hasSession = !!request.cookies.get(REFRESH_COOKIE)?.value;
 
   const isPublicRoute = PUBLIC_ROUTES.some(

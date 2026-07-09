@@ -2,7 +2,6 @@
  * Auth Service - Authentication related API calls
  * Handles all authentication operations including login, registration,
  * password reset, and session management
- * Supports demo mode with mock data
  *
  * Web auth contract (X-Client: web):
  * - login/register/refresh set the refresh token as an httpOnly cookie and
@@ -12,7 +11,6 @@
 
 import { apiClient } from "./api-client";
 import { refreshTokenWithDedup } from "./token-refresh";
-import { isDemoMode, mockAuthService, mockSettingsService } from "./mock-api-service";
 import type { User, AuthTokens } from "@/types";
 
 // ============================================
@@ -65,10 +63,6 @@ export const authService = {
    * arrives as an httpOnly cookie, not in the body.
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    if (isDemoMode()) {
-      return mockAuthService.login(credentials.email, credentials.password);
-    }
-
     const formData = new URLSearchParams();
     formData.append("username", credentials.email);
     formData.append("password", credentials.password);
@@ -103,10 +97,6 @@ export const authService = {
    * Register a new user account
    */
   async register(data: RegisterData): Promise<AuthResponse> {
-    if (isDemoMode()) {
-      return mockAuthService.register(data);
-    }
-
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: "POST",
       headers: {
@@ -139,14 +129,6 @@ export const authService = {
    * Refresh the access token via the httpOnly refresh cookie
    */
   async refreshToken(): Promise<AuthTokens> {
-    if (isDemoMode()) {
-      return {
-        access_token: "demo_access_token_" + Date.now(),
-        refresh_token: null,
-        token_type: "bearer",
-        expires_in: 1800,
-      };
-    }
     return refreshTokenWithDedup();
   },
 
@@ -155,10 +137,6 @@ export const authService = {
    * Returns success even if email doesn't exist (for security)
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
-    if (isDemoMode()) {
-      return { message: "If an account exists, a reset email has been sent" };
-    }
-
     const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
       method: "POST",
       headers: {
@@ -179,10 +157,6 @@ export const authService = {
    * Reset password with token from email
    */
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
-    if (isDemoMode()) {
-      return { message: "Password reset successfully" };
-    }
-
     const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
       method: "POST",
       headers: {
@@ -206,9 +180,6 @@ export const authService = {
    * Verify email with token
    */
   async verifyEmail(token: string): Promise<{ message: string }> {
-    if (isDemoMode()) {
-      return { message: "Email verified successfully" };
-    }
     return apiClient.post("/auth/verify-email", { token });
   },
 
@@ -216,9 +187,6 @@ export const authService = {
    * Resend verification email (for the logged-in account)
    */
   async resendVerificationEmail(): Promise<{ message: string }> {
-    if (isDemoMode()) {
-      return { message: "Verification email sent" };
-    }
     return apiClient.post("/auth/resend-verification");
   },
 
@@ -226,9 +194,6 @@ export const authService = {
    * Get current user profile
    */
   async getCurrentUser(): Promise<User> {
-    if (isDemoMode()) {
-      return mockAuthService.getCurrentUser();
-    }
     return apiClient.get<User>("/users/me");
   },
 
@@ -236,9 +201,6 @@ export const authService = {
    * Update user profile
    */
   async updateProfile(data: UpdateProfileData): Promise<User> {
-    if (isDemoMode()) {
-      return mockAuthService.updateProfile(data);
-    }
     return apiClient.patch<User>("/users/me", data);
   },
 
@@ -246,9 +208,6 @@ export const authService = {
    * Change password (requires current password; revokes other sessions)
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
-    if (isDemoMode()) {
-      return mockAuthService.changePassword();
-    }
     return apiClient.post("/users/me/change-password", {
       current_password: currentPassword,
       new_password: newPassword,
@@ -259,9 +218,6 @@ export const authService = {
    * Logout - revokes the refresh session server-side and clears the cookie
    */
   async logout(): Promise<void> {
-    if (isDemoMode()) {
-      return;
-    }
     try {
       const token = (await import("@/stores")).useAuthStore.getState().tokens
         ?.access_token;
@@ -283,9 +239,6 @@ export const authService = {
    * Validate current session
    */
   async validateSession(): Promise<boolean> {
-    if (isDemoMode()) {
-      return true;
-    }
     try {
       await apiClient.get("/auth/validate");
       return true;
@@ -306,9 +259,6 @@ export const authService = {
     last_active: string;
     is_current: boolean;
   }>> {
-    if (isDemoMode()) {
-      return mockSettingsService.getActiveSessions();
-    }
     return apiClient.get("/auth/sessions");
   },
 
@@ -316,9 +266,6 @@ export const authService = {
    * Revoke a specific session
    */
   async revokeSession(sessionId: string): Promise<{ message: string }> {
-    if (isDemoMode()) {
-      return mockSettingsService.revokeSession(sessionId);
-    }
     return apiClient.delete(`/auth/sessions/${sessionId}`);
   },
 
@@ -326,9 +273,6 @@ export const authService = {
    * Revoke all sessions except current
    */
   async revokeAllSessions(): Promise<{ message: string }> {
-    if (isDemoMode()) {
-      return mockSettingsService.revokeAllSessions();
-    }
     return apiClient.post("/auth/sessions/revoke-all");
   },
 };

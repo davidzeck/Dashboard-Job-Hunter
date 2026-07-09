@@ -9,6 +9,7 @@
  */
 
 import { useAuthStore } from "@/stores";
+import { clearAllUserState } from "@/lib/query-client";
 import { refreshTokenWithDedup } from "./token-refresh";
 import type { ApiError } from "@/types";
 
@@ -124,11 +125,13 @@ class ApiClient {
         await refreshTokenWithDedup();
       } catch {
         useAuthStore.getState().logout();
+        clearAllUserState();
         throw new Error("Session expired. Please log in again.");
       }
       response = await doFetch();
       if (response.status === 401) {
         useAuthStore.getState().logout();
+        clearAllUserState();
         throw new Error("Session expired. Please log in again.");
       }
     }

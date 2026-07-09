@@ -10,6 +10,7 @@ import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Check } from "lucide-react";
 import { registerSchema, type RegisterFormData } from "@/lib/validations/auth";
 import { useAuthStore, useToast } from "@/stores";
 import { authService } from "@/services";
+import { clearAllUserState } from "@/lib/query-client";
 import {
   Button,
   Input,
@@ -62,6 +63,9 @@ export function RegisterForm() {
         password: data.password,
         full_name: data.fullName,
       });
+
+      // Account isolation: start from a clean slate (see login-form)
+      clearAllUserState();
 
       // Access token → memory (store); refresh token → httpOnly cookie set
       // by the backend.

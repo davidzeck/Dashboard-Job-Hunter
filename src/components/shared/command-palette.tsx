@@ -19,10 +19,9 @@ import {
   Command,
   Hash,
 } from "lucide-react";
-import { useUIStore, useAuthStore } from "@/stores";
+import { useUIStore, useJobsStore } from "@/stores";
+import { useLogout } from "@/hooks";
 import { Input } from "@/components/ui";
-import { mockJobs, mockCompanies, mockSources } from "@/lib/mock-data";
-import type { Job, Company, JobSource } from "@/types";
 
 // Command types
 type CommandType = "navigation" | "action" | "job" | "company" | "source" | "setting";
@@ -53,7 +52,9 @@ export function CommandPalette() {
   const openModal = useUIStore((state) => state.openModal);
   const theme = useUIStore((state) => state.theme);
   const setTheme = useUIStore((state) => state.setTheme);
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useLogout();
+  // Real, already-loaded jobs (from the Jobs page) power live search
+  const jobs = useJobsStore((state) => state.jobs);
 
   const [query, setQuery] = React.useState("");
   const [selectedIndex, setSelectedIndex] = React.useState(0);
@@ -189,29 +190,27 @@ export function CommandPalette() {
       icon: <LogOut className="h-4 w-4" />,
       keywords: ["logout", "sign out", "exit"],
       action: () => {
-        logout();
-        router.push("/login");
         close();
+        logout();
       },
     },
   ];
 
-  // Search results from mock data
+  // Live search over the real, already-loaded jobs (from the Jobs page).
   const getSearchResults = React.useCallback((searchQuery: string): CommandItem[] => {
     if (!searchQuery || searchQuery.length < 2) return [];
 
     const lowerQuery = searchQuery.toLowerCase();
     const results: CommandItem[] = [];
 
-    // Search jobs
-    const matchingJobs = mockJobs
+    const matchingJobs = jobs
       .filter(
         (job) =>
           job.title.toLowerCase().includes(lowerQuery) ||
-          job.company?.name.toLowerCase().includes(lowerQuery) ||
+          job.company?.name?.toLowerCase().includes(lowerQuery) ||
           job.location?.toLowerCase().includes(lowerQuery)
       )
-      .slice(0, 5);
+      .slice(0, 8);
 
     matchingJobs.forEach((job) => {
       results.push({
@@ -227,50 +226,8 @@ export function CommandPalette() {
       });
     });
 
-    // Search companies
-    const matchingCompanies = mockCompanies
-      .filter((company) => company.name.toLowerCase().includes(lowerQuery))
-      .slice(0, 3);
-
-    matchingCompanies.forEach((company) => {
-      results.push({
-        id: `company-${company.id}`,
-        type: "company",
-        title: company.name,
-        subtitle: company.is_active ? "Active" : "Inactive",
-        icon: <Building2 className="h-4 w-4" />,
-        action: () => {
-          router.push(`/companies/${company.id}`);
-          close();
-        },
-      });
-    });
-
-    // Search sources
-    const matchingSources = mockSources
-      .filter(
-        (source) =>
-          source.source_url.toLowerCase().includes(lowerQuery) ||
-          source.company?.name.toLowerCase().includes(lowerQuery)
-      )
-      .slice(0, 3);
-
-    matchingSources.forEach((source) => {
-      results.push({
-        id: `source-${source.id}`,
-        type: "source",
-        title: source.company?.name || "Unknown Source",
-        subtitle: source.source_type,
-        icon: <Database className="h-4 w-4" />,
-        action: () => {
-          router.push(`/sources/${source.id}`);
-          close();
-        },
-      });
-    });
-
     return results;
-  }, [router, close]);
+  }, [router, close, jobs]);
 
   // Filter commands based on query
   const filteredCommands = React.useMemo(() => {

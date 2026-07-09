@@ -20,7 +20,8 @@ import {
   CardTitle,
   CardContent,
 } from "@/components/ui";
-import { useCVs, useAnalyzeCv, useTailorCv, useTaskStatus } from "@/hooks";
+import { useCVs, useAnalyzeCv, useTailorCv, useTaskStatus, useAiUsage } from "@/hooks";
+import { AiUsageBanner } from "@/components/shared";
 import type {
   CVResponse,
   CVAnalysisResult,
@@ -35,8 +36,10 @@ interface CVMatchCardProps {
 export function CVMatchCard({ jobId }: CVMatchCardProps) {
   const toast = useToast();
   const { data: cvs, isLoading: cvsLoading } = useCVs();
+  const { data: aiUsage } = useAiUsage();
   const analyzeMutation = useAnalyzeCv();
   const tailorMutation = useTailorCv();
+  const aiBlocked = aiUsage?.exhausted ?? false;
 
   // State
   const [selectedCvId, setSelectedCvId] = React.useState<string | null>(null);
@@ -217,12 +220,15 @@ export function CVMatchCard({ jobId }: CVMatchCardProps) {
           </select>
         )}
 
+        {/* Daily AI quota: warn when nearing, block when exhausted */}
+        <AiUsageBanner usage={aiUsage} />
+
         {/* Analyze button (before results) */}
         {!analysisResult && (
           <Button
             className="w-full gap-2"
             onClick={handleAnalyze}
-            disabled={isAnalyzing || !selectedCvId}
+            disabled={isAnalyzing || !selectedCvId || aiBlocked}
           >
             {isAnalyzing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -353,7 +359,7 @@ export function CVMatchCard({ jobId }: CVMatchCardProps) {
                 variant="outline"
                 className="w-full gap-2"
                 onClick={handleTailor}
-                disabled={isTailoring}
+                disabled={isTailoring || aiBlocked}
               >
                 {isTailoring ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -370,7 +376,7 @@ export function CVMatchCard({ jobId }: CVMatchCardProps) {
               size="sm"
               className="w-full text-muted-foreground"
               onClick={handleAnalyze}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || aiBlocked}
             >
               {isAnalyzing ? "Analyzing..." : "Re-analyze"}
             </Button>

@@ -8,21 +8,12 @@ export { RecentJobsList } from "./recent-jobs-list";
 export { SourceHealth } from "./source-health";
 
 // Charts
-export {
-  JobsTimelineChart,
-  generateMockJobsTimelineData,
-} from "./jobs-timeline-chart";
-export {
-  SourcePerformanceChart,
-  generateMockSourcePerformanceData,
-} from "./source-performance-chart";
-export {
-  ScrapeActivityChart,
-  generateMockScrapeActivityData,
-} from "./scrape-activity-chart";
+export { JobsTimelineChart } from "./jobs-timeline-chart";
+export { SourcePerformanceChart } from "./source-performance-chart";
+export { ScrapeActivityChart } from "./scrape-activity-chart";
 
 // Activity
-export { ActivityFeed, generateMockActivityData } from "./activity-feed";
+export { ActivityFeed } from "./activity-feed";
 
 // Actions
 export { QuickActions, QuickActionsCompact } from "./quick-actions";

@@ -22,7 +22,8 @@ import {
   Button,
   Badge,
 } from "@/components/ui";
-import { useCVs, useUploadCV, useDeleteCV, useGetCVDownloadUrl, useSkills, useAddSkill, useRemoveSkill } from "@/hooks";
+import { useCVs, useUploadCV, useDeleteCV, useGetCVDownloadUrl, useSkills, useAddSkill, useRemoveSkill, useAiUsage } from "@/hooks";
+import { AiUsageBanner } from "@/components/shared";
 import type { CVResponse } from "@/services/cv-service";
 
 // ──────────────────────────────────────────────────────────────
@@ -30,8 +31,13 @@ import type { CVResponse } from "@/services/cv-service";
 // ──────────────────────────────────────────────────────────────
 
 export function CVManagement() {
+  const { data: aiUsage } = useAiUsage();
+
   return (
     <div className="space-y-6">
+      {/* Uploads always work (skills extraction is local), but analysis/tailoring
+          consume the daily AI quota — surface the limit state here too. */}
+      <AiUsageBanner usage={aiUsage} />
       <CVUploadCard />
       <CVListCard />
       <SkillsCard />

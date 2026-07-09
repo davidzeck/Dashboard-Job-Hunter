@@ -94,6 +94,4 @@
 
 ## Notes
 
-- Demo mode works without backend (`NEXT_PUBLIC_DEMO_MODE=true`)
-- All services have mock implementations in `src/services/mock-api-service.ts`
-- Mock data focuses on Kenya/East Africa tech companies
+- Real backend only — demo/mock mode was removed (2026-07-08); services call the live API exclusively

@@ -36,8 +36,15 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { PageHeader } from "@/components/layout";
-import { useSourcesStore, useToast } from "@/stores";
-import type { JobSource, ScrapeLog, ScraperStatus } from "@/types";
+import { useToast } from "@/stores";
+import {
+  useSource,
+  useScrapeLogs,
+  useTriggerScrape,
+  useUpdateSource,
+  useDeleteSource,
+} from "@/hooks";
+import type { ScrapeLog, ScraperStatus } from "@/types";
 
 export default function SourceDetailPage() {
   const router = useRouter();
@@ -45,106 +52,39 @@ export default function SourceDetailPage() {
   const toast = useToast();
   const sourceId = params.id as string;
 
-  // Get source from store
-  const sources = useSourcesStore((state) => state.sources);
-  const source = sources.find((s) => s.id === sourceId);
+  // Real data — fetch source + scrape logs by id
+  const { data: currentSource, isLoading } = useSource(sourceId);
+  const { data: scrapeLogsPage } = useScrapeLogs(sourceId);
+  const scrapeHistory = scrapeLogsPage?.items ?? [];
 
-  // Local state
-  const [isLoading, setIsLoading] = React.useState(!source);
-  const [isScraping, setIsScraping] = React.useState(false);
-  const [mockSource, setMockSource] = React.useState<JobSource | null>(null);
-  const [scrapeHistory, setScrapeHistory] = React.useState<ScrapeLog[]>([]);
-
-  // Load mock data if source not in store
-  React.useEffect(() => {
-    if (!source) {
-      // Simulate API fetch
-      setTimeout(() => {
-        const mock: JobSource = {
-          id: sourceId,
-          company_id: "company-1",
-          company: {
-            id: "company-1",
-            name: "Safaricom",
-            slug: "safaricom",
-            jobs_count: 8,
-            sources_count: 1,
-            logo_url: undefined,
-            careers_url: "https://safaricom.co.ke/careers",
-            is_active: true,
-            scraper_type: "dynamic",
-            scrape_frequency_hours: 12,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          source_type: "careers_page",
-          source_url: "https://safaricom.co.ke/careers",
-          is_active: true,
-          scraper_status: "active",
-          last_scraped_at: new Date(Date.now() - 3600000).toISOString(),
-          jobs_found_count: 47,
-          created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        setMockSource(mock);
-
-        // Generate mock scrape history
-        const history: ScrapeLog[] = Array.from({ length: 10 }).map((_, i) => ({
-          id: `scrape-${i}`,
-          source_id: sourceId,
-          status: i === 2 ? "failed" : "completed",
-          jobs_found: Math.floor(Math.random() * 5) + 1,
-          jobs_new: Math.floor(Math.random() * 3),
-          jobs_updated: Math.floor(Math.random() * 2),
-          error_message: i === 2 ? "Connection timeout" : undefined,
-          started_at: new Date(Date.now() - i * 3600000 * 12).toISOString(),
-          completed_at: new Date(Date.now() - i * 3600000 * 12 + 30000).toISOString(),
-          duration_seconds: Math.floor(Math.random() * 60) + 10,
-        }));
-        setScrapeHistory(history);
-        setIsLoading(false);
-      }, 500);
-    } else {
-      setIsLoading(false);
-    }
-  }, [source, sourceId]);
-
-  const currentSource = source || mockSource;
+  const triggerScrape = useTriggerScrape();
+  const updateSource = useUpdateSource();
+  const deleteSource = useDeleteSource();
+  const isScraping = triggerScrape.isPending;
 
   // Handlers
   const handleBack = () => {
     router.back();
   };
 
-  const handleScrapeNow = async () => {
-    setIsScraping(true);
-    toast.info("Scraping started", "Fetching jobs from source...");
-
-    // Simulate scrape
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    setIsScraping(false);
-    toast.success("Scrape complete", "Found 3 new jobs");
+  const handleScrapeNow = () => {
+    triggerScrape.mutate(sourceId);
   };
 
   const handleToggleActive = () => {
     if (!currentSource) return;
-    toast.success(
-      currentSource.is_active ? "Source paused" : "Source resumed",
-      currentSource.is_active
-        ? "Scraping has been paused"
-        : "Scraping has been resumed"
-    );
+    updateSource.mutate({ id: sourceId, data: { is_active: !currentSource.is_active } });
   };
 
   const handleEdit = () => {
-    toast.info("Edit source", "Opening edit modal...");
+    toast.info("Edit source", "Use the sources list to edit for now.");
   };
 
   const handleDelete = () => {
     if (confirm("Are you sure you want to delete this source?")) {
-      toast.success("Source deleted", "The source has been removed");
-      router.push("/sources");
+      deleteSource.mutate(sourceId, {
+        onSuccess: () => router.push("/sources"),
+      });
     }
   };
 

@@ -106,26 +106,3 @@ function ScrapeActivityChartSkeleton() {
     </Card>
   );
 }
-
-// Generate mock data for development
-export function generateMockScrapeActivityData(): ScrapeActivityData[] {
-  const data: ScrapeActivityData[] = [];
-  const now = new Date();
-
-  for (let i = 23; i >= 0; i--) {
-    const hour = new Date(now);
-    hour.setHours(now.getHours() - i);
-
-    const scrapes = Math.floor(Math.random() * 15) + 2;
-    const failed = Math.random() > 0.8 ? Math.floor(Math.random() * 2) + 1 : 0;
-
-    data.push({
-      hour: hour.toLocaleTimeString("en-US", { hour: "numeric" }),
-      scrapes,
-      success: scrapes - failed,
-      failed,
-    });
-  }
-
-  return data;
-}

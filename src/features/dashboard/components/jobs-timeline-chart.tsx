@@ -140,22 +140,3 @@ function JobsTimelineChartSkeleton() {
     </Card>
   );
 }
-
-// Generate mock data for development
-export function generateMockJobsTimelineData(days: number = 7): JobsTimelineData[] {
-  const data: JobsTimelineData[] = [];
-  const now = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-
-    data.push({
-      date: date.toLocaleDateString("en-US", { weekday: "short" }),
-      jobs: Math.floor(Math.random() * 50) + 100,
-      newJobs: Math.floor(Math.random() * 20) + 5,
-    });
-  }
-
-  return data;
-}

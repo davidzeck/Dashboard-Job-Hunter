@@ -149,19 +149,3 @@ function SourcePerformanceChartSkeleton() {
     </Card>
   );
 }
-
-// Generate mock data for development
-export function generateMockSourcePerformanceData(): {
-  data: SourcePerformanceData;
-  successRate: number;
-} {
-  return {
-    data: {
-      active: Math.floor(Math.random() * 10) + 15,
-      error: Math.floor(Math.random() * 3),
-      paused: Math.floor(Math.random() * 2),
-      inactive: Math.floor(Math.random() * 3),
-    },
-    successRate: Math.floor(Math.random() * 20) + 75,
-  };
-}

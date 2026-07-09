@@ -4,6 +4,7 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { Bell, Search, Moon, Sun, LogOut, Command } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
+import { useLogout } from "@/hooks";
 import { Button, UserAvatar } from "@/components/ui";
 
 interface HeaderProps {
@@ -17,7 +18,7 @@ export function Header({ title, description, actions }: HeaderProps) {
   const setTheme = useUIStore((state) => state.setTheme);
   const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useLogout();
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
 
   const toggleTheme = () => {

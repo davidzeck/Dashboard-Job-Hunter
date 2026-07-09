@@ -13,16 +13,14 @@ Singleton around native `fetch`:
 - **`normalizePaginated`**: backend `{items, total, page, limit, pages}` → dashboard `{items, total, page, page_size, total_pages}`. This is the *only* place the rename happens.
 - Methods: `get/post/put/patch/delete`.
 
-## Demo mode
+## Data source
 
-`isDemoMode()` in [`mock-api-service.ts`](../src/services/mock-api-service.ts):
-- Browser: `NEXT_PUBLIC_DEMO_MODE === "true"` **or** `NEXT_PUBLIC_API_URL` unset.
-- Server-side rendering: always `true` (mock data only during SSR).
-- ⚠️ `NEXT_PUBLIC_API_URL` must stay defined (as `/api/v1`) or the app silently flips to demo. For full demo mode set `NEXT_PUBLIC_DEMO_MODE=true` — [middleware.ts](../src/middleware.ts) also needs it to skip the cookie check.
-
-Demo-aware services branch per call to `mockAuthService`/`mockJobsService`/`mockSourcesService`/`mockCompaniesService` (200–500 ms simulated latency over [`src/lib/mock-data.ts`](../src/lib/mock-data.ts)). Demo login: `demo@jobscout.co.ke` / `demo123` (button rendered on the login form in demo mode).
-
-⚠️ **`cv-service` and `settings-service` are NOT demo-aware** — they always call the real API ([known issue #7](../../docs/known-issues.md)).
+**Real backend only — there is no demo/mock mode** (removed 2026-07-08:
+`mock-api-service.ts`, `mock-data.ts`, `isDemoMode()`). Every service calls the
+live API through the same-origin proxy; `NEXT_PUBLIC_API_URL` must stay defined
+as `/api/v1`. The Overview charts read real admin-only aggregation endpoints
+(`/dashboard/jobs-timeline`, `/scrape-activity`, `/source-performance`,
+`/activity`) via [`dashboard-service.ts`](../src/services/dashboard-service.ts).
 
 ## Service catalog — [`src/services/`](../src/services/)
 

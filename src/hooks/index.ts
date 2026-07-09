@@ -3,6 +3,7 @@
 // Auth hooks
 export {
   useAuth,
+  useLogout,
   useRequireAuth,
   useRedirectIfAuthenticated,
 } from "./use-auth";
@@ -18,6 +19,15 @@ export {
   useDashboardStats,
   jobsKeys,
 } from "./use-jobs";
+
+// Dashboard analytics hooks
+export {
+  useJobsTimeline,
+  useScrapeActivity,
+  useSourcePerformance,
+  useActivity,
+  dashboardKeys,
+} from "./use-dashboard";
 
 // Sources hooks
 export {
@@ -56,6 +66,7 @@ export {
   useAnalyzeCv,
   useTailorCv,
   useTaskStatus,
+  useAiUsage,
   cvKeys,
 } from "./use-cv";
 

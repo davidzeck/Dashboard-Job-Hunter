@@ -70,6 +70,16 @@ export interface CVTaskStatusResponse<T = CVAnalysisResult | CVTailorResult> {
   error?: string | null;
 }
 
+/** GET /users/me/ai-usage — daily quota snapshot for analyze/tailor calls. */
+export interface AiUsage {
+  used: number;
+  limit: number;
+  remaining: number;
+  warn: boolean;
+  exhausted: boolean;
+  resets_in_seconds: number | null;
+}
+
 // ============================================
 // Helpers
 // ============================================
@@ -223,5 +233,10 @@ export const cvService = {
     taskId: string
   ): Promise<CVTaskStatusResponse<T>> {
     return apiClient.get<CVTaskStatusResponse<T>>(`/users/me/cv/tasks/${taskId}`);
+  },
+
+  /** Daily AI quota snapshot — drives the nearing-limit / limit-reached banner. */
+  async getAiUsage(): Promise<AiUsage> {
+    return apiClient.get<AiUsage>("/users/me/ai-usage");
   },
 };

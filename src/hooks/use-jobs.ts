@@ -20,7 +20,7 @@ import {
   selectJobsPagination,
   type JobsState,
 } from "@/stores";
-import { jobsService, isDemoMode } from "@/services";
+import { jobsService } from "@/services";
 import type { Job, PaginatedResponse } from "@/types";
 
 // ============================================
@@ -197,6 +197,6 @@ export function useDashboardStats() {
     queryKey: jobsKeys.stats(),
     queryFn: () => jobsService.getDashboardStats(),
     refetchInterval: 30000, // Refresh every 30 seconds
-    enabled: isAdmin || isDemoMode(),
+    enabled: isAdmin,
   });
 }

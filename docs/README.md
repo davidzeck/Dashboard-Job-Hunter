@@ -11,7 +11,7 @@ System-level context: [`../../docs/`](../../docs/README.md) · Backend API contr
 | [architecture.md](architecture.md) | App Router layout, Providers, the Zustand + React Query state model |
 | [folder-structure.md](folder-structure.md) | Annotated tree of `src/` |
 | [ui-ux-design.md](ui-ux-design.md) | "Urgent Clarity" design system: tokens, dark theme, components, motion |
-| [api-integration.md](api-integration.md) | api-client, service catalog, auth/token/cookie flow, demo mode, CV upload, task polling |
+| [api-integration.md](api-integration.md) | api-client, service catalog, auth/token/cookie flow, CV upload, task polling (real backend only) |
 | [features.md](features.md) | Page-by-page catalog with the components/hooks/stores each uses |
 
 ## Quick start
@@ -20,14 +20,10 @@ System-level context: [`../../docs/`](../../docs/README.md) · Backend API contr
 cd Dashboard-Job-Hunter
 npm install
 
-# Real backend (start Job-backend first):
-echo 'NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1' > .env.local
+# Real backend required (start Job-backend first). Same-origin proxy:
+cp .env.local.example .env.local     # NEXT_PUBLIC_API_URL=/api/v1
 npm run dev            # → http://localhost:3000
-
-# Demo mode (no backend): leave NEXT_PUBLIC_API_URL unset,
-# or force it even with a URL set:
-#   NEXT_PUBLIC_DEMO_MODE=true
-# Demo login: demo@jobscout.co.ke / demo123
+# There is no demo/mock mode — the dashboard talks to the live API only.
 ```
 
 Checks: `npm run lint` · `npm run type-check` · `npm run build`. There are no unit/e2e tests yet.

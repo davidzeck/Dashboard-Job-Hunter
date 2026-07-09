@@ -9,8 +9,8 @@
 import { useEffect, useCallback, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
+import { clearAllUserState } from "@/lib/query-client";
 import { authService } from "@/services/auth-service";
-import { isDemoMode } from "@/services/mock-api-service";
 import { isPublicRoute } from "@/lib/auth";
 
 // Refresh tokens 5 minutes before expiry
@@ -60,6 +60,7 @@ export function useAuth() {
     } catch (error) {
       console.error("Token refresh failed:", error);
       logout();
+      clearAllUserState();
       router.push("/login?expired=true");
     } finally {
       setRefreshing(false);
@@ -75,8 +76,8 @@ export function useAuth() {
     bootstrapStartedRef.current = true;
 
     const bootstrap = async () => {
-      // Demo mode or an in-memory session (client-side nav) needs no bootstrap
-      if (isDemoMode() || useAuthStore.getState().tokens?.access_token) {
+      // An in-memory session (client-side nav) needs no bootstrap
+      if (useAuthStore.getState().tokens?.access_token) {
         setIsBootstrapping(false);
         return;
       }
@@ -93,6 +94,7 @@ export function useAuth() {
       } catch {
         // No/invalid cookie — treat as logged out
         logout();
+        clearAllUserState();
         if (!isPublicRoute(pathname ?? "/")) {
           router.push("/login?expired=true");
         }
@@ -143,6 +145,7 @@ export function useAuth() {
       await authService.logout();
     } finally {
       logout();
+      clearAllUserState();
       router.push("/login");
     }
   }, [logout, router]);
@@ -166,6 +169,8 @@ export function useAuth() {
       sessionCheckRef.current = setInterval(() => {
         const isValid = checkSession();
         if (!isValid) {
+          // checkSession() already logged out the auth store — wipe the rest
+          clearAllUserState();
           router.push("/login?expired=true");
         }
       }, SESSION_CHECK_INTERVAL_MS);
@@ -249,4 +254,28 @@ export function useRedirectIfAuthenticated(redirectTo = "/overview") {
   }, [isAuthenticated, isLoading, router, redirectTo]);
 
   return { isAuthenticated, isLoading };
+}
+
+/**
+ * Standalone logout for buttons/menus. Unlike the store's raw `logout()` (which
+ * only clears client state), this revokes the session + clears the httpOnly
+ * cookie server-side and redirects to /login. Safe to call anywhere (does not
+ * mount the useAuth engine).
+ */
+export function useLogout() {
+  const router = useRouter();
+  const clearAuth = useAuthStore((state) => state.logout);
+
+  return useCallback(async () => {
+    try {
+      await authService.logout();
+    } finally {
+      clearAuth();
+      // Account isolation: wipe every user-scoped store (filters, lists,
+      // selections) and the React Query cache so nothing from this account
+      // can render for the next one on this browser.
+      clearAllUserState();
+      router.replace("/login");
+    }
+  }, [clearAuth, router]);
 }

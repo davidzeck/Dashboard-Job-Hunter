@@ -22,10 +22,6 @@ import {
   ScrapeActivityChart,
   ActivityFeed,
   QuickActions,
-  generateMockJobsTimelineData,
-  generateMockSourcePerformanceData,
-  generateMockScrapeActivityData,
-  generateMockActivityData,
 } from "@/features/dashboard/components";
 import { QuickActionsCompact } from "@/features/dashboard/components/quick-actions";
 import { Sparkline } from "@/components/ui/charts";
@@ -34,6 +30,10 @@ import {
   useNewJobs,
   useErrorSources,
   useTriggerScrape,
+  useJobsTimeline,
+  useScrapeActivity,
+  useSourcePerformance,
+  useActivity,
 } from "@/hooks";
 import { useUIStore, useToast, useAuthStore, selectUser } from "@/stores";
 import { useSettingsStore, type SettingsState } from "@/stores";
@@ -55,15 +55,15 @@ export default function OverviewPage() {
   // Local state for scraping
   const [isScraping, setIsScraping] = React.useState(false);
 
-  // Mock data for charts (replace with real API data)
-  const jobsTimelineData = React.useMemo(() => generateMockJobsTimelineData(7), []);
-  const sourcePerformanceData = React.useMemo(() => generateMockSourcePerformanceData(), []);
-  const scrapeActivityData = React.useMemo(() => generateMockScrapeActivityData(), []);
-  const activityData = React.useMemo(() => generateMockActivityData(15), []);
+  // Real chart data (admin-only endpoints; empty for non-admins)
+  const { data: jobsTimelineData, isLoading: timelineLoading } = useJobsTimeline(7);
+  const { data: sourcePerformanceData, isLoading: perfLoading } = useSourcePerformance();
+  const { data: scrapeActivityData, isLoading: scrapeActivityLoading } = useScrapeActivity(24);
+  const { data: activityData, isLoading: activityLoading } = useActivity(15);
 
-  // Sparkline data for stats cards
+  // Sparkline data for stats cards (derived from the real timeline)
   const jobsSparkline = React.useMemo(
-    () => jobsTimelineData.map((d) => d.newJobs),
+    () => (jobsTimelineData ?? []).map((d) => d.newJobs),
     [jobsTimelineData]
   );
 
@@ -206,15 +206,16 @@ export default function OverviewPage() {
 
       {/* Charts Row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <JobsTimelineChart data={jobsTimelineData} />
+        <JobsTimelineChart data={jobsTimelineData ?? []} isLoading={timelineLoading} />
         <SourcePerformanceChart
-          data={sourcePerformanceData.data}
-          successRate={sourcePerformanceData.successRate}
+          data={sourcePerformanceData?.data ?? { active: 0, error: 0, paused: 0, inactive: 0 }}
+          successRate={sourcePerformanceData?.successRate ?? 0}
+          isLoading={perfLoading}
         />
       </div>
 
       {/* Scrape Activity */}
-      <ScrapeActivityChart data={scrapeActivityData} />
+      <ScrapeActivityChart data={scrapeActivityData ?? []} isLoading={scrapeActivityLoading} />
 
       {/* Bottom Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -229,7 +230,8 @@ export default function OverviewPage() {
 
         {/* Activity Feed */}
         <ActivityFeed
-          activities={activityData}
+          activities={activityData ?? []}
+          isLoading={activityLoading}
           className="lg:col-span-1"
         />
 

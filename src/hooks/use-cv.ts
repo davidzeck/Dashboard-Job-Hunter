@@ -30,7 +30,21 @@ export const cvKeys = {
     [...cvKeys.all, "tailor", cvId, jobId] as const,
   taskStatus: (taskId: string) =>
     [...cvKeys.all, "task", taskId] as const,
+  aiUsage: () => [...cvKeys.all, "ai-usage"] as const,
 };
+
+/**
+ * Daily AI quota snapshot — drives the nearing-limit / limit-reached banner
+ * and disables Analyze/Tailor when exhausted.
+ */
+export function useAiUsage() {
+  return useQuery({
+    queryKey: cvKeys.aiUsage(),
+    queryFn: () => cvService.getAiUsage(),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
 
 // ============================================
 // CV Hooks
@@ -154,14 +168,19 @@ export function useRemoveSkill() {
 
 /** Trigger CV analysis against a job. Returns cached result or task_id for polling. */
 export function useAnalyzeCv() {
+  const queryClient = useQueryClient();
   const toast = useToast();
 
   return useMutation({
     mutationFn: ({ cvId, jobId }: { cvId: string; jobId: string }) =>
       cvService.analyzeCv(cvId, jobId),
+    onSettled: () => {
+      // Each call consumes daily quota — keep the usage banner current
+      queryClient.invalidateQueries({ queryKey: cvKeys.aiUsage() });
+    },
     onError: (error: Error) => {
-      if (error.message.includes("429")) {
-        toast.error("Rate limited", "You've reached the analysis limit. Try again later.");
+      if (error.message.includes("429") || error.message.includes("limit")) {
+        toast.error("AI limit reached", error.message);
       } else {
         toast.error("Analysis failed", error.message);
       }
@@ -171,14 +190,18 @@ export function useAnalyzeCv() {
 
 /** Trigger CV tailoring for a job. Always async — poll with useTaskStatus. */
 export function useTailorCv() {
+  const queryClient = useQueryClient();
   const toast = useToast();
 
   return useMutation({
     mutationFn: ({ cvId, jobId }: { cvId: string; jobId: string }) =>
       cvService.tailorCv(cvId, jobId),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: cvKeys.aiUsage() });
+    },
     onError: (error: Error) => {
-      if (error.message.includes("429")) {
-        toast.error("Rate limited", "You've reached the tailoring limit. Try again later.");
+      if (error.message.includes("429") || error.message.includes("limit")) {
+        toast.error("AI limit reached", error.message);
       } else {
         toast.error("Tailoring failed", error.message);
       }
