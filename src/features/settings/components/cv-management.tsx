@@ -22,9 +22,10 @@ import {
   Button,
   Badge,
 } from "@/components/ui";
-import { useCVs, useUploadCV, useDeleteCV, useGetCVDownloadUrl, useSkills, useAddSkill, useRemoveSkill, useAiUsage } from "@/hooks";
+import { useRouter } from "next/navigation";
+import { useCVs, useUploadCV, useDeleteCV, useGetCVDownloadUrl, useSkills, useAddSkill, useRemoveSkill, useAiUsage, useDrafts } from "@/hooks";
 import { AiUsageBanner } from "@/components/shared";
-import type { CVResponse } from "@/services/cv-service";
+import type { CVResponse, CVDraftStatus } from "@/services/cv-service";
 
 // ──────────────────────────────────────────────────────────────
 // CV Management
@@ -40,6 +41,7 @@ export function CVManagement() {
       <AiUsageBanner usage={aiUsage} />
       <CVUploadCard />
       <CVListCard />
+      <DraftsCard />
       <SkillsCard />
     </div>
   );
@@ -392,6 +394,68 @@ function SkillsCard() {
             ))}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Tailored CV Drafts Card
+// ──────────────────────────────────────────────────────────────
+
+const DRAFT_STATUS_UI: Record<
+  CVDraftStatus,
+  { label: string; variant: "secondary" | "warning" | "success" | "destructive" }
+> = {
+  generating: { label: "Generating", variant: "secondary" },
+  review: { label: "Awaiting review", variant: "warning" },
+  approved: { label: "Rendering", variant: "secondary" },
+  rendered: { label: "Ready to download", variant: "success" },
+  failed: { label: "Failed", variant: "destructive" },
+  superseded: { label: "Superseded", variant: "secondary" },
+};
+
+function DraftsCard() {
+  const router = useRouter();
+  const { data: drafts, isLoading } = useDrafts();
+
+  // Only show the card once the user has drafts — the flow starts on job pages.
+  if (isLoading || !drafts || drafts.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Tailored CVs</CardTitle>
+        <CardDescription>
+          Job-specific CV drafts you&apos;ve curated. Review, approve, and download from each draft.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {drafts.map((draft) => {
+          const ui = DRAFT_STATUS_UI[draft.status] ?? DRAFT_STATUS_UI.generating;
+          return (
+            <button
+              key={draft.id}
+              className="flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left hover:bg-accent/50 transition-colors"
+              onClick={() => router.push(`/cv-drafts/${draft.id}`)}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {draft.content?.tailored?.contact?.name || "Tailored CV"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Created {new Date(draft.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <Badge variant={ui.variant} className="shrink-0">
+                {ui.label}
+              </Badge>
+            </button>
+          );
+        })}
       </CardContent>
     </Card>
   );

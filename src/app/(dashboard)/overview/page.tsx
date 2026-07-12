@@ -16,6 +16,7 @@ import {
   StatsCard,
   StatsCardSkeleton,
   RecentJobsList,
+  RecommendedJobs,
   SourceHealth,
   JobsTimelineChart,
   SourcePerformanceChart,
@@ -137,6 +138,9 @@ export default function OverviewPage() {
           </button>
         </div>
       )}
+
+      {/* Skill-matched recommendations (hidden until the user has a CV) */}
+      <RecommendedJobs hasCv={Boolean(user?.has_cv)} onJobClick={handleJobClick} />
 
       {/* Header with quick actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

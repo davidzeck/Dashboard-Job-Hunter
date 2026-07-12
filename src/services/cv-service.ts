@@ -80,6 +80,70 @@ export interface AiUsage {
   resets_in_seconds: number | null;
 }
 
+// ── Curated CV drafts & document export ──────────────────────
+
+/** Structured CV — mirrors backend CVStructure (app/schemas/cv.py). */
+export interface CVStructure {
+  contact: {
+    name: string;
+    email: string;
+    phone: string;
+    location: string;
+    links: string[];
+  };
+  summary: string;
+  skills: { category: string; items: string[] }[];
+  experience: {
+    title: string;
+    company: string;
+    location: string;
+    start: string;
+    end: string;
+    bullets: string[];
+  }[];
+  education: { degree: string; institution: string; year: string }[];
+  certifications: string[];
+}
+
+export type CVDraftStatus =
+  | "generating"
+  | "review"
+  | "approved"
+  | "rendered"
+  | "failed"
+  | "superseded";
+
+export interface CVDraft {
+  id: string;
+  cv_id: string;
+  job_id: string;
+  status: CVDraftStatus;
+  content: {
+    original: CVStructure;
+    tailored: CVStructure;
+    keywords_injected: string[];
+  } | null;
+  error?: string | null;
+  docx_ready: boolean;
+  pdf_ready: boolean;
+  approved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CurateStartResponse {
+  task_id: string;
+  draft_id: string;
+  status: string;
+}
+
+export interface DraftDownload {
+  draft_id: string;
+  format: "docx" | "pdf";
+  download_url: string;
+  expires_in: number;
+}
+
 // ============================================
 // Helpers
 // ============================================
@@ -238,5 +302,49 @@ export const cvService = {
   /** Daily AI quota snapshot — drives the nearing-limit / limit-reached banner. */
   async getAiUsage(): Promise<AiUsage> {
     return apiClient.get<AiUsage>("/users/me/ai-usage");
+  },
+
+  // ──────────────────────────────────────────
+  // Curated CV drafts & document export
+  // ──────────────────────────────────────────
+
+  /** Start a full-CV curation draft against a job (supersedes any live draft). */
+  async curateCv(cvId: string, jobId: string): Promise<CurateStartResponse> {
+    return apiClient.post<CurateStartResponse>(`/users/me/cv/${cvId}/curate`, {
+      job_id: jobId,
+    });
+  },
+
+  /** The caller's drafts, newest first (superseded excluded). */
+  async listDrafts(): Promise<CVDraft[]> {
+    return apiClient.get<CVDraft[]>("/users/me/cv/drafts");
+  },
+
+  async getDraft(draftId: string): Promise<CVDraft> {
+    return apiClient.get<CVDraft>(`/users/me/cv/drafts/${draftId}`);
+  },
+
+  /** Save user edits to the tailored structure (review stage only). */
+  async updateDraft(draftId: string, tailored: CVStructure): Promise<CVDraft> {
+    return apiClient.patch<CVDraft>(`/users/me/cv/drafts/${draftId}`, { tailored });
+  },
+
+  /** Approve a reviewed draft — enqueues DOCX+PDF generation. */
+  async approveDraft(draftId: string): Promise<CurateStartResponse> {
+    return apiClient.post<CurateStartResponse>(
+      `/users/me/cv/drafts/${draftId}/approve`,
+      {}
+    );
+  },
+
+  /** Presigned download URL for a rendered document. 409 until rendered. */
+  async getDraftDownloadUrl(
+    draftId: string,
+    format: "docx" | "pdf"
+  ): Promise<DraftDownload> {
+    return apiClient.get<DraftDownload>(
+      `/users/me/cv/drafts/${draftId}/download`,
+      { format }
+    );
   },
 };

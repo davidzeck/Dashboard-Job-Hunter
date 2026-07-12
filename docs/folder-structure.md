@@ -18,6 +18,7 @@ Dashboard-Job-Hunter/
 │   │       ├── jobs/[id]/page.tsx    # detail + CVMatchCard (AI sidebar)
 │   │       ├── sources/page.tsx      # scraper sources list
 │   │       ├── sources/[id]/page.tsx # source detail + scrape history
+│   │       ├── cv-drafts/[id]/page.tsx # curation-draft review editor (status-driven)
 │   │       ├── companies/page.tsx    # company grid/table + add/edit modal
 │   │       ├── companies/[id]/page.tsx
 │   │       ├── settings/page.tsx     # 5 tabs (activeTab in settings-store)
@@ -42,7 +43,8 @@ Dashboard-Job-Hunter/
 │   │   ├── sources/components/       # source-card/-list/-table/-filters
 │   │   ├── sources/hooks/            # ⚠️ empty
 │   │   ├── companies/components/     # company-card/-list/-table/-filters
-│   │   ├── dashboard/components/     # stats-card, recent-jobs-list, source-health,
+│   │   ├── cv-drafts/components/     # draft-editor (review → approve → download)
+│   │   ├── dashboard/components/     # stats-card, recommended-jobs, recent-jobs-list, source-health,
 │   │   │                             #   activity-feed, quick-actions, 3 chart components
 │   │   └── settings/components/      # profile-form, notification-settings,
 │   │                                 #   security-settings, cv-management

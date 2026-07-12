@@ -9,6 +9,7 @@ import type {
   JobFilters,
   PaginatedResponse,
   DashboardStats,
+  RecommendedJob,
 } from "@/types";
 
 interface GetJobsParams extends JobFilters {
@@ -55,11 +56,33 @@ export const jobsService = {
       location: params.location,
       location_type: params.location_type,
       days_ago: params.days_ago,
+      validation_status: params.validation_status, // admin review filter
     });
 
     return {
       ...response,
       items: response.items.map(transformJob),
+    };
+  },
+
+  /**
+   * Jobs ranked by skill overlap with the current user's CV skills.
+   * Empty for users without extracted skills (no CV yet).
+   */
+  async getRecommendedJobs(
+    params: { page?: number; page_size?: number } = {}
+  ): Promise<PaginatedResponse<RecommendedJob>> {
+    const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>(
+      "/jobs/recommended",
+      { page: params.page || 1, limit: params.page_size || 6 }
+    );
+    return {
+      ...response,
+      items: response.items.map((raw) => ({
+        ...transformJob(raw),
+        match_score: (raw.match_score as number) ?? 0,
+        matched_skills: (raw.matched_skills as string[]) ?? [],
+      })),
     };
   },
 

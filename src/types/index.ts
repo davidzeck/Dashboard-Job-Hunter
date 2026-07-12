@@ -93,6 +93,16 @@ export interface Job {
   // Current user's persisted actions on this job
   saved?: boolean;
   applied?: boolean;
+  // Backend validation gate (suspect/dead surface in the UI; dead excluded from feeds)
+  validation_status?: ValidationStatus;
+}
+
+export type ValidationStatus = "unverified" | "valid" | "suspect" | "dead";
+
+// GET /jobs/recommended item — Job + skill-overlap score
+export interface RecommendedJob extends Job {
+  match_score: number; // 0-100 weighted skill coverage
+  matched_skills: string[];
 }
 
 // Response from PUT /jobs/:id/saved | /jobs/:id/applied
@@ -174,6 +184,7 @@ export interface JobFilters {
   days_ago?: number; // jobs discovered in the last N days ("New" = 1)
   date_from?: string;
   date_to?: string;
+  validation_status?: ValidationStatus; // admin-only review filter (honored server-side for admins)
 }
 
 export interface SourceFilters {

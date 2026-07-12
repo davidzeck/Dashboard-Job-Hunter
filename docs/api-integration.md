@@ -27,11 +27,11 @@ as `/api/v1`. The Overview charts read real admin-only aggregation endpoints
 | Service | Real endpoints called | Notes |
 |---|---|---|
 | [auth-service.ts](../src/services/auth-service.ts) | `POST /auth/login` (form + `remember_me`) → `GET /users/me`; `POST /auth/register`; refresh via [token-refresh.ts](../src/services/token-refresh.ts) (cookie); `POST /auth/logout`; `GET/DELETE /auth/sessions*`; forgot/reset password; verify-email/resend | Sends `X-Client: web` on login/register/refresh/logout → refresh token arrives as the httpOnly cookie, never in JS. All endpoints exist on the backend as of 2026-07-08 |
-| [jobs-service.ts](../src/services/jobs-service.ts) | `GET /jobs` (page/limit/role/location), `GET /jobs/:id`, `GET /jobs?days_ago=1`, `GET /dashboard/stats` | `transformJob` renames backend fields (`apply_url→application_url`, `posted_at/discovered_at→first_seen_at/last_seen_at`, `is_active→status`). ⚠️ `updateJobStatus`, `getJobsByCompany`, `getJobsBySource` target endpoints the backend lacks |
+| [jobs-service.ts](../src/services/jobs-service.ts) | `GET /jobs` (page/limit/role/location + admin `validation_status`), `GET /jobs/recommended`, `GET /jobs/:id`, `GET /jobs?days_ago=1`, `GET /dashboard/stats` | `transformJob` renames backend fields (`apply_url→application_url`, `posted_at/discovered_at→first_seen_at/last_seen_at`, `is_active→status`). ⚠️ `updateJobStatus`, `getJobsByCompany`, `getJobsBySource` target endpoints the backend lacks |
 | [sources-service.ts](../src/services/sources-service.ts) | `GET/POST /sources`, `GET/PATCH/DELETE /sources/:id`, `POST /sources/:id/scrape`, `GET /sources/:id/logs`, error-sources filter | demo-aware |
 | [companies-service.ts](../src/services/companies-service.ts) | `GET/POST /companies`, `GET/PATCH/DELETE /companies/:id`, active filter | demo-aware |
 | [settings-service.ts](../src/services/settings-service.ts) | notifications/alert-preferences/sessions/export endpoints | ⚠️ almost all of these **don't exist in the backend yet** — UI renders but saves fail against the real API |
-| [cv-service.ts](../src/services/cv-service.ts) | full CV lifecycle + skills + AI (below) | not demo-aware |
+| [cv-service.ts](../src/services/cv-service.ts) | full CV lifecycle + skills + AI (below) + **curation drafts** (`curateCv`, `listDrafts`, `getDraft`, `updateDraft`, `approveDraft`, `getDraftDownloadUrl`) | not demo-aware |
 
 ## Auth flow (httpOnly cookie model, since 2026-07-08)
 
@@ -75,6 +75,10 @@ Types: `CVAnalysisResult`, `CVTailorResult`, generic `CVTaskStatusResponse<T>` (
 - 429 (10/hr or 50/day AI caps) → user-friendly toast; no auto-retry.
 
 UI consumer: [`features/jobs/components/cv-match-card.tsx`](../src/features/jobs/components/cv-match-card.tsx) (CV selector → analyze → score + keyword badges → tailor → copy-to-clipboard).
+
+## CV curation drafts (document export, 2026-07-12)
+
+Hooks in `use-cv.ts`: `useCurateCv` (→ navigate to `/cv-drafts/{draft_id}`), `useDraft(id)` (polls 2 s while `generating`/`approved`, stops on `review`/`rendered`/`failed`), `useUpdateDraft`, `useApproveDraft`, `useDraftDownload` (opens the presigned URL). UI: status-driven editor at [`features/cv-drafts/components/draft-editor.tsx`](../src/features/cv-drafts/components/draft-editor.tsx) (original↔tailored per section, inline edits, sticky Save/Approve bar, DOCX/PDF downloads) + a "Tailored CVs" list card in Settings → Documents.
 
 ## Adding a new API call (checklist)
 

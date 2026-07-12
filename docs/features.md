@@ -6,6 +6,7 @@ What each route shows and which components/hooks/stores it uses. Component paths
 
 The landing dashboard.
 - **Onboarding banner** when `user.has_cv === false` → deep-links to Settings → Documents.
+- **"Recommended for you"** (`features/dashboard/components/recommended-jobs.tsx`, `useRecommendedJobs`): skill-matched job grid with match-% badge (≥75 success / ≥50 warning) + matched-skill chips; hidden without a CV; the overview's first non-admin content.
 - **4 stat cards** (`features/dashboard/components/stats-card.tsx`): Total Jobs, New Today (with `Sparkline`), Active Sources, Alerts Sent — data from `useDashboardStats` → `GET /dashboard/stats`.
 - **Charts** (`jobs-timeline-chart`, `source-performance-chart`, `scrape-activity-chart`): ⚠️ all fed by client-side `generateMock*` helpers, not the API ([known issue #5](../../docs/known-issues.md)).
 - **Recent jobs** (`recent-jobs-list`, `useNewJobs(10)`), **activity feed**, **quick actions**, **source health panel** (`source-health`, `useErrorSources`).
@@ -24,7 +25,12 @@ The landing dashboard.
   - loads CVs via `useCVs`, filters `upload_status === "ready"`, auto-selects the first;
   - **Analyze Match** → `useAnalyzeCv` → cached result or `useTaskStatus` polling → score % (≥75 success / ≥50 warning / else destructive) + present/missing/suggested keyword badges;
   - **Tailor CV for This Job** → `useTailorCv` → tailored summary with copy-to-clipboard + keywords-added list;
+  - **Curate Full CV (PDF/Word)** → `useCurateCv` → navigates to the `/cv-drafts/{draft_id}` review editor;
   - empty state links to `/settings` (Documents).
+
+## `/cv-drafts/[id]` — [`app/(dashboard)/cv-drafts/[id]/page.tsx`](../src/app/%28dashboard%29/cv-drafts/[id]/page.tsx)
+
+Status-driven curation-draft page (`DraftEditor`): `generating`/`approved` show polling spinners; `review` is the editor — per-section original↔tailored (summary + experience bullets side-by-side; contact/skills/education inline), injected-keyword chips, sticky **Save** / **Approve & generate documents** bar; `rendered` offers DOCX/PDF downloads; `failed`/`superseded` show recovery links. Entry point: the job page's CVMatchCard.
 
 ## `/sources` — [`app/(dashboard)/sources/page.tsx`](../src/app/%28dashboard%29/sources/page.tsx)
 
@@ -57,7 +63,7 @@ Tabs driven by `useSettingsStore.activeTab` (`profile | notifications | security
 | Notifications | `notification-settings.tsx` | ⚠️ targets unimplemented backend endpoints |
 | Security | `security-settings.tsx` | change password works; sessions UI targets unimplemented endpoints |
 | Preferences | inline `PreferencesSection` in the page | theme toggle wired to `useUIStore`; display/export controls mostly static |
-| **Documents** | [`cv-management.tsx`](../src/features/settings/components/cv-management.tsx) | The CV hub: **CVUploadCard** (drag-drop PDF ≤5 MB, ≤10 CVs, XHR progress bar), **CVListCard** (status pills ready/processing/pending/failed, download via presigned URL, delete, skills count), **SkillsCard** (add/remove manual skills chips) |
+| **Documents** | [`cv-management.tsx`](../src/features/settings/components/cv-management.tsx) | The CV hub: **CVUploadCard** (drag-drop PDF ≤5 MB, ≤10 CVs, XHR progress bar), **CVListCard** (status pills ready/processing/pending/failed, download via presigned URL, delete, skills count), **SkillsCard** (add/remove manual skills chips), **DraftsCard** (tailored-CV drafts list → `/cv-drafts/{id}`) |
 
 ## Auth pages — `app/(auth)/*`
 

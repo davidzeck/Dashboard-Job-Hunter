@@ -23,7 +23,15 @@ import {
   SearchInput,
   Badge,
 } from "@/components/ui";
-import type { JobFilters, JobStatus, ExperienceLevel, JobType, Company } from "@/types";
+import { useAuthStore, selectIsAdmin } from "@/stores";
+import type {
+  JobFilters,
+  JobStatus,
+  ExperienceLevel,
+  JobType,
+  Company,
+  ValidationStatus,
+} from "@/types";
 
 interface JobFiltersBarProps {
   filters: JobFilters;
@@ -49,6 +57,7 @@ export function JobFiltersBar({
   className,
 }: JobFiltersBarProps) {
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const isAdmin = useAuthStore(selectIsAdmin);
 
   // Count active filters (excluding search + the toggle-owned days_ago/location_type)
   const CHIP_EXCLUDE = ["search", "days_ago", "location_type"];
@@ -123,6 +132,27 @@ export function JobFiltersBar({
             ]}
             className="w-[130px]"
           />
+
+          {/* Validation review filter — admin-only (backend ignores it otherwise) */}
+          {isAdmin && (
+            <FilterSelect
+              value={filters.validation_status || ""}
+              onChange={(value) =>
+                onFilterChange({
+                  validation_status:
+                    value === "" ? undefined : (value as ValidationStatus),
+                })
+              }
+              options={[
+                { value: "", label: "All Validation" },
+                { value: "suspect", label: "Suspect (review)" },
+                { value: "dead", label: "Dead" },
+                { value: "valid", label: "Valid" },
+                { value: "unverified", label: "Unverified" },
+              ]}
+              className="w-[150px]"
+            />
+          )}
 
           {/* Advanced filters toggle */}
           <Button
@@ -448,6 +478,7 @@ function formatFilterLabel(key: string, value: unknown): string {
     date_to: `To: ${v}`,
     salary_min: `Min salary`,
     salary_max: `Max salary`,
+    validation_status: `Validation: ${v}`,
   };
   return labels[key] || `${key}: ${v}`;
 }

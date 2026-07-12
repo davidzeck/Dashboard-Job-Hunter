@@ -16,6 +16,7 @@ export {
   useToggleAppliedJob,
   useSavedJobs,
   useNewJobs,
+  useRecommendedJobs,
   useDashboardStats,
   jobsKeys,
 } from "./use-jobs";
@@ -67,6 +68,12 @@ export {
   useTailorCv,
   useTaskStatus,
   useAiUsage,
+  useCurateCv,
+  useDrafts,
+  useDraft,
+  useUpdateDraft,
+  useApproveDraft,
+  useDraftDownload,
   cvKeys,
 } from "./use-cv";
 

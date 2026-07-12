@@ -132,6 +132,13 @@ export default function JobDetailPage() {
                         {job.status === "new" && (
                           <Badge variant="urgent">New</Badge>
                         )}
+                        {/* Validation gate results — valid/unverified render nothing */}
+                        {job.validation_status === "suspect" && (
+                          <Badge variant="warning">Unverified source match</Badge>
+                        )}
+                        {job.validation_status === "dead" && (
+                          <Badge variant="destructive">Listing appears closed</Badge>
+                        )}
                       </div>
                       <p className="text-lg text-muted-foreground">
                         {job.company?.name || "Unknown Company"}

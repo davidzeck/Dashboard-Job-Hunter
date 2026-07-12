@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Sparkles,
   CheckCircle,
@@ -10,6 +11,7 @@ import {
   Copy,
   Loader2,
   FileText,
+  FileOutput,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -20,7 +22,14 @@ import {
   CardTitle,
   CardContent,
 } from "@/components/ui";
-import { useCVs, useAnalyzeCv, useTailorCv, useTaskStatus, useAiUsage } from "@/hooks";
+import {
+  useCVs,
+  useAnalyzeCv,
+  useTailorCv,
+  useTaskStatus,
+  useAiUsage,
+  useCurateCv,
+} from "@/hooks";
 import { AiUsageBanner } from "@/components/shared";
 import type {
   CVResponse,
@@ -35,10 +44,12 @@ interface CVMatchCardProps {
 
 export function CVMatchCard({ jobId }: CVMatchCardProps) {
   const toast = useToast();
+  const router = useRouter();
   const { data: cvs, isLoading: cvsLoading } = useCVs();
   const { data: aiUsage } = useAiUsage();
   const analyzeMutation = useAnalyzeCv();
   const tailorMutation = useTailorCv();
+  const curateMutation = useCurateCv();
   const aiBlocked = aiUsage?.exhausted ?? false;
 
   // State
@@ -128,6 +139,13 @@ export function CVMatchCard({ jobId }: CVMatchCardProps) {
       navigator.clipboard.writeText(tailorResult.tailored_summary);
       toast.success("Copied", "Tailored summary copied to clipboard");
     }
+  };
+
+  const handleCurate = async () => {
+    if (!selectedCvId) return;
+    // Draft page owns the rest of the flow (poll → review → approve → download)
+    const res = await curateMutation.mutateAsync({ cvId: selectedCvId, jobId });
+    router.push(`/cv-drafts/${res.draft_id}`);
   };
 
   const isAnalyzing =
@@ -369,6 +387,22 @@ export function CVMatchCard({ jobId }: CVMatchCardProps) {
                 {isTailoring ? "Tailoring..." : "Tailor CV for This Job"}
               </Button>
             )}
+
+            {/* Curate full CV → downloadable ATS document (review flow) */}
+            <Button
+              className="w-full gap-2"
+              onClick={handleCurate}
+              disabled={curateMutation.isPending || aiBlocked}
+            >
+              {curateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileOutput className="h-4 w-4" />
+              )}
+              {curateMutation.isPending
+                ? "Starting curation..."
+                : "Curate Full CV (PDF/Word)"}
+            </Button>
 
             {/* Re-analyze */}
             <Button

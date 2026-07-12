@@ -190,6 +190,18 @@ export function useNewJobs(limit: number = 10) {
   });
 }
 
+/**
+ * Jobs ranked by skill overlap with the user's CV skills.
+ * Empty when the user has no extracted skills — callers hide the section.
+ */
+export function useRecommendedJobs(limit: number = 6) {
+  return useQuery({
+    queryKey: [...jobsKeys.all, "recommended", limit],
+    queryFn: () => jobsService.getRecommendedJobs({ page: 1, page_size: limit }),
+    staleTime: 60_000,
+  });
+}
+
 export function useDashboardStats() {
   // /dashboard/stats is admin-only (403 for normal users) — don't even ask
   const isAdmin = useAuthStore(selectIsAdmin);

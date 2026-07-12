@@ -14,6 +14,7 @@ import type {
   CVAnalysisResult,
   CVTailorResult,
   CVTaskStatusResponse,
+  CVStructure,
 } from "@/services/cv-service";
 
 // ============================================
@@ -28,6 +29,8 @@ export const cvKeys = {
     [...cvKeys.all, "analysis", cvId, jobId] as const,
   tailor: (cvId: string, jobId: string) =>
     [...cvKeys.all, "tailor", cvId, jobId] as const,
+  drafts: () => [...cvKeys.all, "drafts"] as const,
+  draft: (draftId: string) => [...cvKeys.drafts(), draftId] as const,
   taskStatus: (taskId: string) =>
     [...cvKeys.all, "task", taskId] as const,
   aiUsage: () => [...cvKeys.all, "ai-usage"] as const,
@@ -224,6 +227,111 @@ export function useTaskStatus<T = CVAnalysisResult | CVTailorResult>(
       const status = query.state.data?.status;
       if (status === "success" || status === "failure") return false;
       return 2000;
+    },
+  });
+}
+
+// ============================================
+// Curated CV Drafts (document export)
+// ============================================
+
+/** Start a full-CV curation draft against a job (heaviest AI call — daily cap applies). */
+export function useCurateCv() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: ({ cvId, jobId }: { cvId: string; jobId: string }) =>
+      cvService.curateCv(cvId, jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cvKeys.drafts() });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: cvKeys.aiUsage() });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes("429") || error.message.includes("limit")) {
+        toast.error("AI limit reached", error.message);
+      } else {
+        toast.error("Curation failed to start", error.message);
+      }
+    },
+  });
+}
+
+/** All of the caller's drafts (superseded excluded). */
+export function useDrafts() {
+  return useQuery({
+    queryKey: cvKeys.drafts(),
+    queryFn: () => cvService.listDrafts(),
+  });
+}
+
+/**
+ * One draft. Polls every 2s while in a transient state (generating → review,
+ * approved → rendered); stops on review/rendered/failed/superseded.
+ */
+export function useDraft(draftId: string | null) {
+  return useQuery({
+    queryKey: cvKeys.draft(draftId ?? ""),
+    queryFn: () => cvService.getDraft(draftId!),
+    enabled: !!draftId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === "generating" || status === "approved") return 2000;
+      return false;
+    },
+  });
+}
+
+/** Save the user's edits to the tailored structure (review stage only). */
+export function useUpdateDraft() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: ({ draftId, tailored }: { draftId: string; tailored: CVStructure }) =>
+      cvService.updateDraft(draftId, tailored),
+    onSuccess: (draft) => {
+      queryClient.setQueryData(cvKeys.draft(draft.id), draft);
+      toast.success("Draft saved", "Your edits have been saved.");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to save draft", error.message);
+    },
+  });
+}
+
+/** Approve a reviewed draft — enqueues DOCX+PDF generation. */
+export function useApproveDraft() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: (draftId: string) => cvService.approveDraft(draftId),
+    onSuccess: (_res, draftId) => {
+      // Flip the draft query back into polling mode (approved → rendered)
+      queryClient.invalidateQueries({ queryKey: cvKeys.draft(draftId) });
+      queryClient.invalidateQueries({ queryKey: cvKeys.drafts() });
+    },
+    onError: (error: Error) => {
+      toast.error("Approval failed", error.message);
+    },
+  });
+}
+
+/** Fetch a presigned download URL and open it. */
+export function useDraftDownload() {
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: ({ draftId, format }: { draftId: string; format: "docx" | "pdf" }) =>
+      cvService.getDraftDownloadUrl(draftId, format),
+    onSuccess: (download) => {
+      window.open(download.download_url, "_blank");
+    },
+    onError: (error: Error) => {
+      toast.error("Download failed", error.message);
     },
   });
 }

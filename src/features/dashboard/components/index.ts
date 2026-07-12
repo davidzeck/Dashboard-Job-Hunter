@@ -5,6 +5,7 @@ export { StatsCard, StatsCardSkeleton } from "./stats-card";
 
 // Lists
 export { RecentJobsList } from "./recent-jobs-list";
+export { RecommendedJobs } from "./recommended-jobs";
 export { SourceHealth } from "./source-health";
 
 // Charts
