@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -8,7 +9,12 @@ import {
   TrendingUp,
   Database,
   Bell,
+  Bookmark,
+  CheckCircle2,
+  Sparkles,
   FileText,
+  Search,
+  Brain,
   ArrowRight,
 } from "lucide-react";
 import { PageHeader, DashboardGrid } from "@/components/layout";
@@ -25,6 +31,7 @@ import {
   QuickActions,
 } from "@/features/dashboard/components";
 import { QuickActionsCompact } from "@/features/dashboard/components/quick-actions";
+import { Card, CardHeader, CardTitle, CardContent, Button } from "@/components/ui";
 import { Sparkline } from "@/components/ui/charts";
 import {
   useDashboardStats,
@@ -35,86 +42,41 @@ import {
   useScrapeActivity,
   useSourcePerformance,
   useActivity,
+  useUserStats,
+  useAiUsage,
 } from "@/hooks";
-import { useUIStore, useToast, useAuthStore, selectUser } from "@/stores";
-import { useSettingsStore, type SettingsState } from "@/stores";
+import {
+  useUIStore,
+  useToast,
+  useAuthStore,
+  selectUser,
+  selectIsAdmin,
+} from "@/stores";
 import type { Job } from "@/types";
 
 export default function OverviewPage() {
   const router = useRouter();
-  const toast = useToast();
-  const openModal = useUIStore((state) => state.openModal);
   const user = useAuthStore(selectUser);
-  const setActiveTab = useSettingsStore((s: SettingsState) => s.setActiveTab);
+  const isAdmin = useAuthStore(selectIsAdmin);
 
-  // Data fetching hooks
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  // Client data
+  const { data: userStats, isLoading: userStatsLoading } = useUserStats();
+  const { data: aiUsage } = useAiUsage();
   const { data: newJobs, isLoading: jobsLoading } = useNewJobs(10);
-  const { data: errorSources, isLoading: sourcesLoading } = useErrorSources();
-  const triggerScrape = useTriggerScrape();
 
-  // Local state for scraping
-  const [isScraping, setIsScraping] = React.useState(false);
-
-  // Real chart data (admin-only endpoints; empty for non-admins)
-  const { data: jobsTimelineData, isLoading: timelineLoading } = useJobsTimeline(7);
-  const { data: sourcePerformanceData, isLoading: perfLoading } = useSourcePerformance();
-  const { data: scrapeActivityData, isLoading: scrapeActivityLoading } = useScrapeActivity(24);
-  const { data: activityData, isLoading: activityLoading } = useActivity(15);
-
-  // Sparkline data for stats cards (derived from the real timeline)
-  const jobsSparkline = React.useMemo(
-    () => (jobsTimelineData ?? []).map((d) => d.newJobs),
-    [jobsTimelineData]
-  );
-
-  // Handlers
   const handleJobClick = (job: Job) => {
     router.push(`/jobs/${job.id}`);
   };
 
-  const handleSourceRefresh = (sourceId: string) => {
-    triggerScrape.mutate(sourceId);
-  };
-
-  const handleTriggerAllScrapes = async () => {
-    setIsScraping(true);
-    toast.info("Starting scrape", "Scraping all active sources...");
-
-    // Simulate scrape delay (replace with real API call)
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    setIsScraping(false);
-    toast.success("Scrape complete", "All sources have been scraped");
-  };
-
-  const handleAddSource = () => {
-    openModal("add-source");
-  };
-
-  const handleAddCompany = () => {
-    openModal("add-company");
-  };
-
-  const handleViewErrors = () => {
-    router.push("/sources?status=error");
-  };
-
-  const handleExportJobs = () => {
-    toast.info("Export started", "Preparing CSV download...");
-  };
-
-  const handleOpenSettings = () => {
-    router.push("/settings");
-  };
-
-  const handleGoToDocuments = () => {
-    setActiveTab("documents");
-    router.push("/settings");
-  };
+  const firstName = user?.full_name?.split(" ")[0];
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title={firstName ? `Welcome back, ${firstName}` : "Overview"}
+        description="Your job search at a glance"
+      />
+
       {/* CV onboarding banner — shown when user has no CV */}
       {user && !user.has_cv && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
@@ -130,7 +92,7 @@ export default function OverviewPage() {
             </div>
           </div>
           <button
-            onClick={handleGoToDocuments}
+            onClick={() => router.push("/cvs")}
             className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
           >
             Upload CV
@@ -139,25 +101,159 @@ export default function OverviewPage() {
         </div>
       )}
 
+      {/* Personal activity tiles — all clickable */}
+      <DashboardGrid columns={4}>
+        {userStatsLoading ? (
+          <>
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+          </>
+        ) : (
+          <>
+            <Link href="/my-jobs">
+              <StatsCard
+                title="Saved Jobs"
+                value={userStats?.saved_count ?? 0}
+                description="Bookmarked for later"
+                icon={Bookmark}
+              />
+            </Link>
+            <Link href="/my-jobs?tab=applied">
+              <StatsCard
+                title="Applications"
+                value={userStats?.applied_count ?? 0}
+                description="Jobs you've applied to"
+                icon={CheckCircle2}
+              />
+            </Link>
+            <Link href="/alerts">
+              <StatsCard
+                title="Unread Alerts"
+                value={userStats?.unread_alerts ?? 0}
+                description="New job matches"
+                icon={Bell}
+                variant={userStats?.unread_alerts ? "urgent" : "default"}
+              />
+            </Link>
+            <Link href="/cvs">
+              <StatsCard
+                title="AI Credits"
+                value={
+                  aiUsage ? `${aiUsage.remaining}/${aiUsage.limit}` : "—"
+                }
+                description="Analyze & tailor calls left today"
+                icon={Sparkles}
+                variant={aiUsage?.exhausted ? "warning" : "default"}
+              />
+            </Link>
+          </>
+        )}
+      </DashboardGrid>
+
       {/* Skill-matched recommendations (hidden until the user has a CV) */}
       <RecommendedJobs hasCv={Boolean(user?.has_cv)} onJobClick={handleJobClick} />
 
-      {/* Header with quick actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <PageHeader
-          title="Dashboard Overview"
-          description="Monitor job scraping activity and discover new opportunities"
+      {/* Recent jobs + client quick actions */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <RecentJobsList
+          jobs={newJobs || []}
+          isLoading={jobsLoading}
+          onJobClick={handleJobClick}
+          onViewAll={() => router.push("/jobs?new=1")}
+          className="lg:col-span-2"
         />
+        <ClientQuickActions />
+      </div>
+
+      {/* Platform analytics — admin only */}
+      {isAdmin && <AdminPlatformSection onJobClick={handleJobClick} />}
+    </div>
+  );
+}
+
+// ─── Client quick actions ─────────────────────────────────────
+
+function ClientQuickActions() {
+  const router = useRouter();
+  const actions = [
+    { label: "Browse jobs", icon: Search, href: "/jobs" },
+    { label: "Manage CVs", icon: FileText, href: "/cvs" },
+    { label: "Review alerts", icon: Bell, href: "/alerts" },
+    { label: "Edit skills & profile", icon: Brain, href: "/settings" },
+  ];
+  return (
+    <Card className="lg:col-span-1">
+      <CardHeader>
+        <CardTitle className="text-lg">Quick Actions</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {actions.map(({ label, icon: Icon, href }) => (
+          <Button
+            key={href}
+            variant="outline"
+            className="w-full justify-start gap-2"
+            onClick={() => router.push(href)}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Admin platform section (unchanged widgets, gated) ────────
+
+function AdminPlatformSection({ onJobClick }: { onJobClick: (job: Job) => void }) {
+  const router = useRouter();
+  const toast = useToast();
+  const openModal = useUIStore((state) => state.openModal);
+
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: errorSources, isLoading: sourcesLoading } = useErrorSources();
+  const triggerScrape = useTriggerScrape();
+  const [isScraping, setIsScraping] = React.useState(false);
+
+  const { data: jobsTimelineData, isLoading: timelineLoading } = useJobsTimeline(7);
+  const { data: sourcePerformanceData, isLoading: perfLoading } = useSourcePerformance();
+  const { data: scrapeActivityData, isLoading: scrapeActivityLoading } = useScrapeActivity(24);
+  const { data: activityData, isLoading: activityLoading } = useActivity(15);
+
+  const jobsSparkline = React.useMemo(
+    () => (jobsTimelineData ?? []).map((d) => d.newJobs),
+    [jobsTimelineData]
+  );
+
+  const handleTriggerAllScrapes = async () => {
+    setIsScraping(true);
+    toast.info("Starting scrape", "Scraping all active sources...");
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    setIsScraping(false);
+    toast.success("Scrape complete", "All sources have been scraped");
+  };
+
+  return (
+    <div className="space-y-6 border-t pt-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Platform</h2>
+          <p className="text-sm text-muted-foreground">
+            Scraping activity and source health (admin)
+          </p>
+        </div>
         <QuickActionsCompact
           onTriggerAllScrapes={handleTriggerAllScrapes}
-          onAddSource={handleAddSource}
-          onViewErrors={handleViewErrors}
+          onAddSource={() => openModal("add-source")}
+          onViewErrors={() => router.push("/sources?status=error")}
           isScraping={isScraping}
           errorCount={errorSources?.length || 0}
         />
       </div>
 
-      {/* Stats Grid */}
+      {/* Platform stats */}
       <DashboardGrid columns={4}>
         {statsLoading ? (
           <>
@@ -218,44 +314,32 @@ export default function OverviewPage() {
         />
       </div>
 
-      {/* Scrape Activity */}
       <ScrapeActivityChart data={scrapeActivityData ?? []} isLoading={scrapeActivityLoading} />
 
-      {/* Bottom Grid */}
+      {/* Activity + admin actions + source health */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Jobs */}
-        <RecentJobsList
-          jobs={newJobs || []}
-          isLoading={jobsLoading}
-          onJobClick={handleJobClick}
-          onViewAll={() => router.push("/jobs?new=1")}
-          className="lg:col-span-1"
-        />
-
-        {/* Activity Feed */}
         <ActivityFeed
           activities={activityData ?? []}
           isLoading={activityLoading}
-          className="lg:col-span-1"
+          className="lg:col-span-2"
         />
-
-        {/* Quick Actions & Source Health */}
         <div className="space-y-6 lg:col-span-1">
           <QuickActions
             onTriggerAllScrapes={handleTriggerAllScrapes}
-            onAddSource={handleAddSource}
-            onAddCompany={handleAddCompany}
-            onViewErrors={handleViewErrors}
-            onExportJobs={handleExportJobs}
-            onOpenSettings={handleOpenSettings}
+            onAddSource={() => openModal("add-source")}
+            onAddCompany={() => openModal("add-company")}
+            onViewErrors={() => router.push("/sources?status=error")}
+            onExportJobs={() =>
+              toast.info("Export started", "Preparing CSV download...")
+            }
+            onOpenSettings={() => router.push("/settings")}
             isScraping={isScraping}
             errorCount={errorSources?.length || 0}
           />
-
           <SourceHealth
             sources={errorSources || []}
             isLoading={sourcesLoading}
-            onRefresh={handleSourceRefresh}
+            onRefresh={(sourceId) => triggerScrape.mutate(sourceId)}
           />
         </div>
       </div>

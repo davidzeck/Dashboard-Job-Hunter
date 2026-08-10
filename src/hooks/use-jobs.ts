@@ -145,6 +145,7 @@ export function useToggleSaveJob() {
       queryClient.invalidateQueries({ queryKey: jobsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: jobsKeys.detail(res.job_id) });
       queryClient.invalidateQueries({ queryKey: [...jobsKeys.all, "saved"] });
+      queryClient.invalidateQueries({ queryKey: [...jobsKeys.all, "user-stats"] });
       toast.success(res.saved ? "Job saved" : "Removed from saved");
     },
     onError: (error: Error) => {
@@ -163,6 +164,8 @@ export function useToggleAppliedJob() {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: jobsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: jobsKeys.detail(res.job_id) });
+      queryClient.invalidateQueries({ queryKey: [...jobsKeys.all, "applied"] });
+      queryClient.invalidateQueries({ queryKey: [...jobsKeys.all, "user-stats"] });
       toast.success(res.applied ? "Marked as applied" : "Applied status cleared");
     },
     onError: (error: Error) => {
@@ -175,6 +178,26 @@ export function useSavedJobs(params: { page?: number; page_size?: number } = {})
   return useQuery({
     queryKey: [...jobsKeys.all, "saved", params],
     queryFn: () => jobsService.getSavedJobs(params),
+  });
+}
+
+export function useAppliedJobs(params: { page?: number; page_size?: number } = {}) {
+  return useQuery({
+    queryKey: [...jobsKeys.all, "applied", params],
+    queryFn: () => jobsService.getAppliedJobs(params),
+  });
+}
+
+/**
+ * Per-user activity counts — powers the overview stat tiles,
+ * the sidebar/header alert badges. Cheap endpoint, polled.
+ */
+export function useUserStats() {
+  return useQuery({
+    queryKey: [...jobsKeys.all, "user-stats"],
+    queryFn: () => jobsService.getUserStats(),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 }
 

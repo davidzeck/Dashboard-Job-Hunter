@@ -10,6 +10,7 @@ import type {
   PaginatedResponse,
   DashboardStats,
   RecommendedJob,
+  UserStats,
 } from "@/types";
 
 interface GetJobsParams extends JobFilters {
@@ -20,7 +21,7 @@ interface GetJobsParams extends JobFilters {
 }
 
 // Backend returns different field names — normalize to dashboard Job type
-function transformJob(raw: Record<string, unknown>): Job {
+export function transformJob(raw: Record<string, unknown>): Job {
   const company = raw.company as Record<string, unknown> | undefined;
   return {
     ...(raw as unknown as Job),
@@ -56,6 +57,7 @@ export const jobsService = {
       location: params.location,
       location_type: params.location_type,
       days_ago: params.days_ago,
+      company: params.company, // company slug filter
       validation_status: params.validation_status, // admin review filter
     });
 
@@ -145,6 +147,26 @@ export const jobsService = {
       { page: params.page || 1, limit: params.page_size || 20 }
     );
     return { ...response, items: response.items.map(transformJob) };
+  },
+
+  /**
+   * Get the jobs the current user has marked as applied
+   */
+  async getAppliedJobs(
+    params: { page?: number; page_size?: number } = {}
+  ): Promise<PaginatedResponse<Job>> {
+    const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>(
+      "/jobs/applied",
+      { page: params.page || 1, limit: params.page_size || 20 }
+    );
+    return { ...response, items: response.items.map(transformJob) };
+  },
+
+  /**
+   * Per-user activity counts (saved/applied jobs, unread alerts)
+   */
+  async getUserStats(): Promise<UserStats> {
+    return apiClient.get<UserStats>("/users/me/stats");
   },
 
   /**

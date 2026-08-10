@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui";
 import { formatDistanceToNow } from "@/lib/utils";
+import { useAuthStore, selectIsAdmin } from "@/stores";
 import type { Company } from "@/types";
 
 interface CompanyCardProps {
@@ -42,9 +43,15 @@ export function CompanyCard({
   onToggleActive,
 }: CompanyCardProps) {
   const router = useRouter();
+  const isAdmin = useAuthStore(selectIsAdmin);
 
   const handleClick = () => {
-    router.push(`/companies/${company.id}`);
+    // Admins manage the company; job seekers see its jobs
+    if (isAdmin) {
+      router.push(`/companies/${company.id}`);
+    } else {
+      router.push(`/jobs?company=${company.slug}`);
+    }
   };
 
   const scraperTypeLabels: Record<string, string> = {
@@ -94,10 +101,18 @@ export function CompanyCard({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                    <DropdownMenuItem onClick={() => router.push(`/companies/${company.id}`)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
+                    <DropdownMenuItem
+                      onClick={() => router.push(`/jobs?company=${company.slug}`)}
+                    >
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      View Jobs
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => router.push(`/companies/${company.id}`)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </DropdownMenuItem>
+                    )}
                     {onEdit && (
                       <DropdownMenuItem onClick={() => onEdit(company)}>
                         <Edit2 className="h-4 w-4 mr-2" />

@@ -8,6 +8,8 @@ import {
   Clock,
   ExternalLink,
   DollarSign,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime, formatSalary } from "@/lib/utils";
@@ -20,6 +22,7 @@ import {
   CompanyAvatar,
   Button,
 } from "@/components/ui";
+import { useToggleSaveJob } from "@/hooks";
 import type { Job, JobStatus, ExperienceLevel, JobType } from "@/types";
 
 // Dumb component - pure presentation
@@ -53,7 +56,10 @@ export function JobCard({ job, onClick, onApply, className }: JobCardProps) {
                   {job.company?.name}
                 </p>
               </div>
-              <JobStatusBadge status={job.status} />
+              <div className="flex items-center gap-1">
+                <JobStatusBadge status={job.status} />
+                <SaveButton job={job} />
+              </div>
             </div>
           </div>
         </div>
@@ -106,6 +112,30 @@ export function JobCard({ job, onClick, onApply, className }: JobCardProps) {
         </Button>
       </CardFooter>
     </MotionCard>
+  );
+}
+
+// Save/bookmark toggle — self-contained so the grid (default view) has it
+function SaveButton({ job }: { job: Job }) {
+  const toggleSave = useToggleSaveJob();
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 shrink-0"
+      title={job.saved ? "Remove from saved" : "Save job"}
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleSave.mutate({ id: job.id, saved: !job.saved });
+      }}
+      disabled={toggleSave.isPending}
+    >
+      {job.saved ? (
+        <BookmarkCheck className="h-4 w-4 text-primary" />
+      ) : (
+        <Bookmark className="h-4 w-4 text-muted-foreground" />
+      )}
+    </Button>
   );
 }
 

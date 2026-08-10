@@ -11,6 +11,8 @@ export interface User {
   is_admin: boolean;
   has_cv: boolean;
   skills_count: number;
+  /** Raw preferences dict from the backend: roles[], locations[], companies[], notifications{} */
+  preferences?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -135,15 +137,25 @@ export interface ScrapeLog {
 }
 
 // Alert Types
+/** Matches the backend AlertResponse (GET /alerts). */
 export interface UserJobAlert {
   id: string;
-  user_id: string;
-  job_id: string;
-  job?: Job;
-  sent_at?: string;
-  opened_at?: string;
-  clicked_at?: string;
+  job: Job;
+  is_read: boolean;
+  is_saved: boolean;
+  is_applied: boolean;
+  notified_at: string;
+  notification_channel?: string | null;
+  is_delivered: boolean;
+  applied_at?: string | null;
   created_at: string;
+}
+
+/** GET /users/me/stats — per-user activity counts. */
+export interface UserStats {
+  saved_count: number;
+  applied_count: number;
+  unread_alerts: number;
 }
 
 // Dashboard Stats
@@ -174,6 +186,7 @@ export interface ApiError {
 // Filter Types
 export interface JobFilters {
   search?: string;
+  company?: string; // company slug — backend `company` filter
   company_id?: string;
   source_id?: string;
   status?: JobStatus;

@@ -18,8 +18,11 @@ import {
   ArrowRight,
   Command,
   Hash,
+  Bookmark,
+  Bell,
+  FileText,
 } from "lucide-react";
-import { useUIStore, useJobsStore } from "@/stores";
+import { useUIStore, useJobsStore, useAuthStore, selectIsAdmin } from "@/stores";
 import { useLogout } from "@/hooks";
 import { Input } from "@/components/ui";
 
@@ -53,6 +56,7 @@ export function CommandPalette() {
   const theme = useUIStore((state) => state.theme);
   const setTheme = useUIStore((state) => state.setTheme);
   const logout = useLogout();
+  const isAdmin = useAuthStore(selectIsAdmin);
   // Real, already-loaded jobs (from the Jobs page) power live search
   const jobs = useJobsStore((state) => state.jobs);
 
@@ -95,10 +99,46 @@ export function CommandPalette() {
       },
     },
     {
+      id: "nav-my-jobs",
+      type: "navigation",
+      title: "Go to My Jobs",
+      subtitle: "Saved jobs and applications",
+      icon: <Bookmark className="h-4 w-4" />,
+      keywords: ["saved", "applied", "bookmarks", "applications", "my jobs"],
+      action: () => {
+        router.push("/my-jobs");
+        close();
+      },
+    },
+    {
+      id: "nav-alerts",
+      type: "navigation",
+      title: "Go to Alerts",
+      subtitle: "New job matches for you",
+      icon: <Bell className="h-4 w-4" />,
+      keywords: ["alerts", "notifications", "matches"],
+      action: () => {
+        router.push("/alerts");
+        close();
+      },
+    },
+    {
+      id: "nav-cvs",
+      type: "navigation",
+      title: "Go to My CVs",
+      subtitle: "Upload and tailor your CVs",
+      icon: <FileText className="h-4 w-4" />,
+      keywords: ["cv", "cvs", "resume", "documents", "tailor"],
+      action: () => {
+        router.push("/cvs");
+        close();
+      },
+    },
+    {
       id: "nav-companies",
       type: "navigation",
       title: "Go to Companies",
-      subtitle: "Manage tracked companies",
+      subtitle: "Browse tracked companies",
       icon: <Building2 className="h-4 w-4" />,
       keywords: ["companies", "organizations"],
       action: () => {
@@ -106,18 +146,23 @@ export function CommandPalette() {
         close();
       },
     },
-    {
-      id: "nav-sources",
-      type: "navigation",
-      title: "Go to Sources",
-      subtitle: "Manage job sources",
-      icon: <Database className="h-4 w-4" />,
-      keywords: ["sources", "scrapers", "feeds"],
-      action: () => {
-        router.push("/sources");
-        close();
-      },
-    },
+    // Admin-only navigation
+    ...(isAdmin
+      ? [
+          {
+            id: "nav-sources",
+            type: "navigation" as const,
+            title: "Go to Sources",
+            subtitle: "Manage job sources",
+            icon: <Database className="h-4 w-4" />,
+            keywords: ["sources", "scrapers", "feeds"],
+            action: () => {
+              router.push("/sources");
+              close();
+            },
+          },
+        ]
+      : []),
     {
       id: "nav-settings",
       type: "navigation",
@@ -132,44 +177,48 @@ export function CommandPalette() {
     },
   ];
 
-  // Action commands
+  // Action commands (admin platform actions are gated)
   const actionCommands: CommandItem[] = [
-    {
-      id: "action-add-company",
-      type: "action",
-      title: "Add New Company",
-      subtitle: "Track a new company",
-      icon: <Plus className="h-4 w-4" />,
-      keywords: ["add", "new", "company", "create"],
-      action: () => {
-        openModal("add-company");
-        close();
-      },
-    },
-    {
-      id: "action-add-source",
-      type: "action",
-      title: "Add New Source",
-      subtitle: "Add a job source to scrape",
-      icon: <Plus className="h-4 w-4" />,
-      keywords: ["add", "new", "source", "scraper"],
-      action: () => {
-        openModal("add-source");
-        close();
-      },
-    },
-    {
-      id: "action-scrape-all",
-      type: "action",
-      title: "Trigger All Scrapes",
-      subtitle: "Start scraping all active sources",
-      icon: <Play className="h-4 w-4" />,
-      keywords: ["scrape", "refresh", "update", "fetch"],
-      action: () => {
-        // This would trigger the scrape all action
-        close();
-      },
-    },
+    ...(isAdmin
+      ? [
+          {
+            id: "action-add-company",
+            type: "action" as const,
+            title: "Add New Company",
+            subtitle: "Track a new company",
+            icon: <Plus className="h-4 w-4" />,
+            keywords: ["add", "new", "company", "create"],
+            action: () => {
+              openModal("add-company");
+              close();
+            },
+          },
+          {
+            id: "action-add-source",
+            type: "action" as const,
+            title: "Add New Source",
+            subtitle: "Add a job source to scrape",
+            icon: <Plus className="h-4 w-4" />,
+            keywords: ["add", "new", "source", "scraper"],
+            action: () => {
+              openModal("add-source");
+              close();
+            },
+          },
+          {
+            id: "action-scrape-all",
+            type: "action" as const,
+            title: "Trigger All Scrapes",
+            subtitle: "Start scraping all active sources",
+            icon: <Play className="h-4 w-4" />,
+            keywords: ["scrape", "refresh", "update", "fetch"],
+            action: () => {
+              // This would trigger the scrape all action
+              close();
+            },
+          },
+        ]
+      : []),
     {
       id: "action-toggle-theme",
       type: "setting",

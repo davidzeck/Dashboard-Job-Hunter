@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Bell, Search, Moon, Sun, LogOut, Command } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
-import { useLogout } from "@/hooks";
+import { useLogout, useUserStats } from "@/hooks";
 import { Button, UserAvatar } from "@/components/ui";
 
 interface HeaderProps {
@@ -20,6 +21,8 @@ export function Header({ title, description, actions }: HeaderProps) {
   const user = useAuthStore((state) => state.user);
   const logout = useLogout();
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
+  const { data: stats } = useUserStats();
+  const unread = stats?.unread_alerts ?? 0;
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -78,13 +81,22 @@ export function Header({ title, description, actions }: HeaderProps) {
             )}
           </Button>
 
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="h-9 w-9 relative">
-            <Bell className="h-4 w-4" />
-            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-urgent text-[10px] font-medium text-urgent-foreground flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          {/* Notifications — real unread count, links to the alerts feed */}
+          <Link href="/alerts">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 relative"
+              title="Alerts"
+            >
+              <Bell className="h-4 w-4" />
+              {unread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-0.5 rounded-full bg-urgent text-[10px] font-medium text-urgent-foreground flex items-center justify-center">
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </Button>
+          </Link>
 
           {/* User menu */}
           <div className="flex items-center gap-3 border-l pl-4">

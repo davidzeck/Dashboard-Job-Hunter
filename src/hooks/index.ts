@@ -15,11 +15,23 @@ export {
   useToggleSaveJob,
   useToggleAppliedJob,
   useSavedJobs,
+  useAppliedJobs,
+  useUserStats,
   useNewJobs,
   useRecommendedJobs,
   useDashboardStats,
   jobsKeys,
 } from "./use-jobs";
+
+// Alerts hooks
+export {
+  useAlerts,
+  useMarkAlertRead,
+  useToggleAlertSaved,
+  useMarkAlertApplied,
+  useMarkAllAlertsRead,
+  alertsKeys,
+} from "./use-alerts";
 
 // Dashboard analytics hooks
 export {

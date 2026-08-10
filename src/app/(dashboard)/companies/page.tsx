@@ -14,13 +14,20 @@ import {
   useDeleteCompany,
   useToggleCompanyActive,
 } from "@/hooks";
-import { useCompaniesStore, useUIStore, useToast } from "@/stores";
+import {
+  useCompaniesStore,
+  useUIStore,
+  useToast,
+  useAuthStore,
+  selectIsAdmin,
+} from "@/stores";
 import type { Company, SortConfig } from "@/types";
 
 type ViewMode = "grid" | "table";
 
 export default function CompaniesPage() {
   const toast = useToast();
+  const isAdmin = useAuthStore(selectIsAdmin);
   const { isLoading, refetch } = useCompanies();
 
   // Store state
@@ -107,10 +114,12 @@ export default function CompaniesPage() {
               Refresh
             </Button>
 
-            <Button size="sm" onClick={handleAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Company
-            </Button>
+            {isAdmin && (
+              <Button size="sm" onClick={handleAddNew}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Company
+              </Button>
+            )}
           </div>
         }
       />
@@ -131,9 +140,9 @@ export default function CompaniesPage() {
           sort={sort}
           onSort={handleSortChange}
           onPageChange={setPage}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onToggleActive={handleToggleActive}
+          onEdit={isAdmin ? handleEdit : undefined}
+          onDelete={isAdmin ? handleDelete : undefined}
+          onToggleActive={isAdmin ? handleToggleActive : undefined}
         />
       ) : (
         <CompanyList
@@ -141,10 +150,10 @@ export default function CompaniesPage() {
           isLoading={isLoading}
           pagination={pagination}
           onPageChange={setPage}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onToggleActive={handleToggleActive}
-          onAddNew={handleAddNew}
+          onEdit={isAdmin ? handleEdit : undefined}
+          onDelete={isAdmin ? handleDelete : undefined}
+          onToggleActive={isAdmin ? handleToggleActive : undefined}
+          onAddNew={isAdmin ? handleAddNew : undefined}
         />
       )}
     </div>

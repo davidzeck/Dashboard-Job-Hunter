@@ -84,12 +84,18 @@ export default function JobsPage() {
     setPage(1);
   };
 
-  // Deep link from the Overview "New Jobs" card: /jobs?new=1 lands pre-filtered.
+  // Deep links: /jobs?new=1 (Overview) and /jobs?company=slug (Companies page).
   const appliedNewParam = React.useRef(false);
   React.useEffect(() => {
-    if (!appliedNewParam.current && searchParams.get("new") === "1") {
+    if (appliedNewParam.current) return;
+    const isNew = searchParams.get("new") === "1";
+    const company = searchParams.get("company");
+    if (isNew || company) {
       appliedNewParam.current = true;
-      setFilters({ days_ago: 1 });
+      setFilters({
+        ...(isNew ? { days_ago: 1 } : {}),
+        ...(company ? { company, days_ago: 30 } : {}),
+      });
     }
   }, [searchParams, setFilters]);
 

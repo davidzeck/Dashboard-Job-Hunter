@@ -136,7 +136,7 @@ export function DraftEditor({ draftId }: DraftEditorProps) {
         <div className="flex flex-col items-center gap-4">
           <ErrorState
             title="Draft superseded"
-            description="A newer curation exists for this CV and job. Check Settings → Documents for your drafts."
+            description="A newer curation exists for this CV and job. Check My CVs for your drafts."
           />
           <Button variant="outline" onClick={() => router.push(`/jobs/${draft.job_id}`)}>
             Back to job

@@ -12,7 +12,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useSourcesStore,
+  useAuthStore,
   useToast,
+  selectIsAdmin,
   selectSourcesFilters,
   selectSourcesPagination,
   selectSourcesSort,
@@ -236,9 +238,12 @@ export function useScrapeLogs(sourceId: string) {
  * Hook for fetching error sources
  */
 export function useErrorSources() {
+  // Sources endpoints are admin-only (403 for normal users) — don't even ask
+  const isAdmin = useAuthStore(selectIsAdmin);
   return useQuery({
     queryKey: sourcesKeys.errors(),
     queryFn: () => sourcesService.getErrorSources(),
     refetchInterval: 60000, // Refresh every minute
+    enabled: isAdmin,
   });
 }

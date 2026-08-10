@@ -187,8 +187,8 @@ export function CVMatchCard({ jobId }: CVMatchCardProps) {
             <FileText className="h-5 w-5 shrink-0 mt-0.5" />
             <p>
               Upload a CV in{" "}
-              <a href="/settings" className="text-primary underline">
-                Settings
+              <a href="/cvs" className="text-primary underline">
+                My CVs
               </a>{" "}
               to enable AI-powered match analysis.
             </p>

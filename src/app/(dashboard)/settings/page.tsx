@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { User, Bell, Shield, Settings2, FileText, Moon, Sun, Monitor } from "lucide-react";
+import { User, Bell, Shield, Settings2, Moon, Sun, Monitor } from "lucide-react";
 import { PageHeader } from "@/components/layout";
 import {
   Card,
@@ -20,7 +20,7 @@ import {
   ProfileForm,
   NotificationSettings,
   SecuritySettings,
-  CVManagement,
+  JobAlertPreferences,
 } from "@/features/settings/components";
 
 export default function SettingsPage() {
@@ -37,11 +37,11 @@ export default function SettingsPage() {
       <Tabs
         value={activeTab}
         onValueChange={(value) =>
-          setActiveTab(value as "profile" | "notifications" | "security" | "preferences" | "documents")
+          setActiveTab(value as "profile" | "notifications" | "security" | "preferences")
         }
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
@@ -57,10 +57,6 @@ export default function SettingsPage() {
           <TabsTrigger value="preferences" className="gap-2">
             <Settings2 className="h-4 w-4" />
             <span className="hidden sm:inline">Preferences</span>
-          </TabsTrigger>
-          <TabsTrigger value="documents" className="gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Documents</span>
           </TabsTrigger>
         </TabsList>
 
@@ -83,11 +79,6 @@ export default function SettingsPage() {
         <TabsContent value="preferences" className="space-y-6">
           <PreferencesSection />
         </TabsContent>
-
-        {/* Documents Tab */}
-        <TabsContent value="documents" className="space-y-6">
-          <CVManagement />
-        </TabsContent>
       </Tabs>
     </div>
   );
@@ -99,6 +90,9 @@ function PreferencesSection() {
 
   return (
     <div className="space-y-6">
+      {/* Job alert filters — roles, locations, company watchlist */}
+      <JobAlertPreferences />
+
       {/* Appearance */}
       <Card>
         <CardHeader>
@@ -143,84 +137,6 @@ function PreferencesSection() {
         </CardContent>
       </Card>
 
-      {/* Display Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Display</CardTitle>
-          <CardDescription>
-            Configure default display options
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">Default View</p>
-              <p className="text-xs text-muted-foreground">
-                Choose between card and table views
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                Cards
-              </Button>
-              <Button variant="ghost" size="sm">
-                Table
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">Items Per Page</p>
-              <p className="text-xs text-muted-foreground">
-                Number of items to show in lists
-              </p>
-            </div>
-            <select className="h-9 rounded-md border border-input bg-background px-3 text-sm">
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">Show Expired Jobs</p>
-              <p className="text-xs text-muted-foreground">
-                Include expired job listings in search results
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-input"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Data & Privacy */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Data & Privacy</CardTitle>
-          <CardDescription>
-            Manage your data and privacy settings
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">Export Your Data</p>
-              <p className="text-xs text-muted-foreground">
-                Download all your data in JSON format
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              Export Data
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

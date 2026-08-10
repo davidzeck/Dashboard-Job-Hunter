@@ -161,6 +161,19 @@ export const settingsService = {
     return apiClient.patch<UserPreferences>("/users/me/preferences", data);
   },
 
+  /**
+   * Update job-alert preferences (roles / locations / company watchlist).
+   * The real backend contract: PUT /users/me/preferences with a partial dict
+   * that gets merged into user.preferences; returns the updated user.
+   */
+  async updateJobPreferences(prefs: {
+    roles?: string[];
+    locations?: string[];
+    companies?: string[];
+  }): Promise<{ preferences: Record<string, unknown> }> {
+    return apiClient.put("/users/me/preferences", prefs);
+  },
+
   // ==========================================
   // Session Management
   // ==========================================

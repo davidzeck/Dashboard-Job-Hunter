@@ -7,30 +7,43 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Briefcase,
+  Bookmark,
+  Bell,
   Building2,
   Database,
   Settings,
+  FileText,
   ChevronLeft,
   ChevronRight,
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, selectIsAdmin, useUIStore } from "@/stores";
+import { useUserStats } from "@/hooks";
 import { Button } from "@/components/ui";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
-  adminOnly?: boolean;
+  /** Shows the unread-alerts count pill when set */
+  alertBadge?: boolean;
 }
 
-const navItems: NavItem[] = [
+// Client-facing navigation — every authenticated user
+const clientNavItems: NavItem[] = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
-  { label: "Sources", href: "/sources", icon: Database, adminOnly: true },
-  { label: "Companies", href: "/companies", icon: Building2, adminOnly: true },
+  { label: "My Jobs", href: "/my-jobs", icon: Bookmark },
+  { label: "Alerts", href: "/alerts", icon: Bell, alertBadge: true },
+  { label: "My CVs", href: "/cvs", icon: FileText },
+  { label: "Companies", href: "/companies", icon: Building2 },
   { label: "Settings", href: "/settings", icon: Settings },
+];
+
+// Admin section — platform management
+const adminNavItems: NavItem[] = [
+  { label: "Sources", href: "/sources", icon: Database },
 ];
 
 export function Sidebar() {
@@ -38,7 +51,8 @@ export function Sidebar() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebarCollapse = useUIStore((state) => state.toggleSidebarCollapse);
   const isAdmin = useAuthStore(selectIsAdmin);
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
+  const { data: stats } = useUserStats();
+  const unread = stats?.unread_alerts ?? 0;
 
   return (
     <motion.aside
@@ -71,57 +85,130 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-2">
-          {visibleNavItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
-            const Icon = item.icon;
+          {clientNavItems.map((item) => (
+            <SidebarLink
+              key={item.href}
+              item={item}
+              isActive={pathname.startsWith(item.href)}
+              collapsed={sidebarCollapsed}
+              badgeCount={item.alertBadge ? unread : 0}
+            />
+          ))}
 
-            return (
-              <Link key={item.href} href={item.href}>
-                <motion.div
-                  whileHover={{ x: 2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <AnimatePresence mode="wait">
-                    {!sidebarCollapsed && (
-                      <motion.span
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: "auto" }}
-                        exit={{ opacity: 0, width: 0 }}
-                        className="overflow-hidden whitespace-nowrap"
-                      >
-                        {item.label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              </Link>
-            );
-          })}
+          {isAdmin && (
+            <>
+              <div className="pt-4 pb-1">
+                {!sidebarCollapsed ? (
+                  <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Admin
+                  </p>
+                ) : (
+                  <div className="mx-3 border-t" />
+                )}
+              </div>
+              {adminNavItems.map((item) => (
+                <SidebarLink
+                  key={item.href}
+                  item={item}
+                  isActive={pathname.startsWith(item.href)}
+                  collapsed={sidebarCollapsed}
+                  badgeCount={0}
+                />
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Collapse toggle */}
-        <div className="border-t p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleSidebarCollapse}
-            className="w-full justify-center"
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+        <CollapseToggle
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebarCollapse}
+        />
       </div>
     </motion.aside>
+  );
+}
+
+function SidebarLink({
+  item,
+  isActive,
+  collapsed,
+  badgeCount,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  collapsed: boolean;
+  badgeCount: number;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link href={item.href}>
+      <motion.div
+        whileHover={{ x: 2 }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        )}
+      >
+        <span className="relative shrink-0">
+          <Icon className="h-5 w-5" />
+          {badgeCount > 0 && collapsed && (
+            <span className="absolute -top-1.5 -right-1.5 h-2 w-2 rounded-full bg-urgent" />
+          )}
+        </span>
+        <AnimatePresence mode="wait">
+          {!collapsed && (
+            <motion.span
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              className="overflow-hidden whitespace-nowrap flex-1"
+            >
+              {item.label}
+            </motion.span>
+          )}
+        </AnimatePresence>
+        {badgeCount > 0 && !collapsed && (
+          <span
+            className={cn(
+              "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none",
+              isActive
+                ? "bg-primary-foreground/20 text-primary-foreground"
+                : "bg-urgent text-urgent-foreground"
+            )}
+          >
+            {badgeCount > 9 ? "9+" : badgeCount}
+          </span>
+        )}
+      </motion.div>
+    </Link>
+  );
+}
+
+function CollapseToggle({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="border-t p-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onToggle}
+        className="w-full justify-center"
+      >
+        {collapsed ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <ChevronLeft className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
   );
 }

@@ -16,12 +16,15 @@ Dashboard-Job-Hunter/
 │   │       ├── overview/page.tsx     # stats, charts, recent jobs, quick actions
 │   │       ├── jobs/page.tsx         # list: grid/table, filters, bulk select
 │   │       ├── jobs/[id]/page.tsx    # detail + CVMatchCard (AI sidebar)
+│   │       ├── my-jobs/page.tsx      # Saved | Applied tabs (client)
+│   │       ├── alerts/page.tsx       # job-alert feed (client)
 │   │       ├── sources/page.tsx      # scraper sources list
 │   │       ├── sources/[id]/page.tsx # source detail + scrape history
+│   │       ├── cvs/page.tsx          # My CVs hub (upload/list/skills/drafts) — client-facing
 │   │       ├── cv-drafts/[id]/page.tsx # curation-draft review editor (status-driven)
 │   │       ├── companies/page.tsx    # company grid/table + add/edit modal
 │   │       ├── companies/[id]/page.tsx
-│   │       ├── settings/page.tsx     # 5 tabs (activeTab in settings-store)
+│   │       ├── settings/page.tsx     # 4 tabs (activeTab in settings-store)
 │   │       └── scrape-logs/          # ⚠️ EMPTY — no page.tsx, route doesn't exist
 │   │
 │   ├── middleware.ts                 # cookie-based route protection (SSR edge)
@@ -43,17 +46,20 @@ Dashboard-Job-Hunter/
 │   │   ├── sources/components/       # source-card/-list/-table/-filters
 │   │   ├── sources/hooks/            # ⚠️ empty
 │   │   ├── companies/components/     # company-card/-list/-table/-filters
+│   │   ├── my-jobs/components/       # my-jobs-tabs (Saved | Applied)
+│   │   ├── alerts/components/        # alerts-list (feed, unread toggle, mark-all-read)
+│   │   ├── cvs/components/           # cv-management (My CVs hub: upload/list/skills/drafts)
 │   │   ├── cv-drafts/components/     # draft-editor (review → approve → download)
 │   │   ├── dashboard/components/     # stats-card, recommended-jobs, recent-jobs-list, source-health,
 │   │   │                             #   activity-feed, quick-actions, 3 chart components
 │   │   └── settings/components/      # profile-form, notification-settings,
-│   │                                 #   security-settings, cv-management
+│   │                                 #   security-settings
 │   │
-│   ├── hooks/                        # React Query hooks: use-auth, use-jobs, use-sources,
-│   │                                 #   use-companies, use-cv, use-settings
+│   ├── hooks/                        # React Query hooks: use-auth, use-jobs, use-alerts,
+│   │                                 #   use-sources, use-companies, use-cv, use-settings
 │   ├── stores/                       # Zustand: auth, jobs, sources, companies, settings, ui
-│   ├── services/                     # api-client + auth/jobs/sources/companies/settings/cv
-│   │                                 #   services + mock-api-service (demo mode switch)
+│   ├── services/                     # api-client + auth/jobs/alerts/sources/companies/
+│   │                                 #   settings/cv services
 │   ├── types/index.ts                # shared API/domain types (watch for drift w/ backend)
 │   ├── constants/index.ts            # endpoint map + option lists (services mostly inline paths)
 │   └── lib/
