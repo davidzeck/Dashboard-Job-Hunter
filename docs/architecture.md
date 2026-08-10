@@ -51,7 +51,7 @@ Note: `src/features/jobs/hooks/` and `src/features/sources/hooks/` directories e
 
 ## Services layer
 
-One service per domain in [`src/services/`](../src/services/) wrapping the `api-client` singleton; mock twins in `mock-api-service.ts` backed by [`src/lib/mock-data.ts`](../src/lib/mock-data.ts). Full endpoint tables and the demo-mode branching rules: [api-integration.md](api-integration.md).
+One service per domain in [`src/services/`](../src/services/) wrapping the `api-client` singleton. Demo mode and its mock twins were removed in 2026-07-08 — every service calls the real API. Full endpoint tables: [api-integration.md](api-integration.md).
 
 ## Layout & shared components
 

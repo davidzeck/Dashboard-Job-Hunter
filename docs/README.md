@@ -33,7 +33,7 @@ Checks: `npm run lint` · `npm run type-check` · `npm run build`. There are no 
 - Routes live in [`src/app/`](../src/app/) in two groups: `(auth)` and `(dashboard)`. Sidebar nav: Overview, Jobs, Sources, Companies, Settings.
 - Data flow is one pattern everywhere: **React Query hook fetches → writes response into a Zustand store → components read store selectors**. Stores never filter client-side; params go back through the API ([architecture.md](architecture.md)).
 - All HTTP goes through the fetch singleton [`src/services/api-client.ts`](../src/services/api-client.ts) (Bearer injection, 401→logout, pagination normalization).
-- Demo mode is decided by `isDemoMode()` in [`src/services/mock-api-service.ts`](../src/services/mock-api-service.ts) — ⚠️ `cv-service` and `settings-service` ignore it and always hit the real API.
+- There is no demo mode: it was removed in 2026-07-08 (no `isDemoMode()`, no `mock-*` modules) and every service calls the real API. The Flutter app still has one; the dashboard does not.
 - ⚠️ Known rough edges (mock chart data, detail-page fallbacks, endpoints the backend doesn't have): [`../../docs/known-issues.md`](../../docs/known-issues.md) #5–#12.
 
 ## Conventions
