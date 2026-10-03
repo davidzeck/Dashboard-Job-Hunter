@@ -3,7 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bookmark, BookmarkCheck, CheckCircle2, ExternalLink } from "lucide-react";
+import {
+  Archive,
+  Bookmark,
+  BookmarkCheck,
+  CheckCircle2,
+  ExternalLink,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -189,6 +195,16 @@ function MyJobRow({
               {job.title}
             </Link>
             {badge}
+            {/* These lists are history and now include closed postings, so
+                that an application you genuinely made does not vanish when
+                the employer takes the listing down. Say why it looks dead
+                rather than showing a silently broken row. */}
+            {job.status === "expired" && (
+              <Badge variant="secondary" className="gap-1">
+                <Archive className="h-3 w-3" />
+                No longer listed
+              </Badge>
+            )}
           </div>
           <p className="mt-0.5 truncate text-sm text-muted-foreground">
             {job.company?.name}
@@ -200,7 +216,7 @@ function MyJobRow({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {action}
-          {job.application_url && (
+          {job.application_url && job.status !== "expired" && (
             <Button
               variant="outline"
               size="sm"
