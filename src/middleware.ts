@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/privacy", // linked from the Play Store listing — must load logged-out
 ];
 
 // Auth routes - redirect to dashboard if already logged in

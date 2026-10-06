@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run type-check
+      # (no lint step: there is no ESLint config yet — known issue #20)
+      - run: npm run build
+        env:
+          API_PROXY_URL: http://api:8000/api/v1
+          NEXT_PUBLIC_API_URL: /api/v1
+      - name: Build the dashboard image
+        run: docker build --build-arg API_PROXY_URL=http://api:8000/api/v1 -t jobscout-dashboard .

@@ -1,0 +1,12 @@
+# Never bake local env files into the image: NEXT_PUBLIC_* values are inlined
+# into the client bundle at build time.
+.env
+.env.*
+!.env.local.example
+
+node_modules/
+.next/
+.git/
+.github/
+*.log
+.DS_Store
